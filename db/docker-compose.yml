@@ -1,0 +1,33 @@
+services:
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mguser
+      POSTGRES_PASSWORD: mgpassword
+      POSTGRES_DB: mgledger
+    volumes:
+      - mg-erp-pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: unless-stopped
+    user: root
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "user@mgdonlinestore.com"
+      PGADMIN_DEFAULT_PASSWORD: "password"
+    volumes:
+      - db-data:/var/lib/pgadmin
+      - ./servers.json:/pgadmin4/servers.json
+      - ./pgpass:/pgpass
+    ports:
+      - "8088:80"
+    # To connect in pgAdmin, use:
+    # Host: postgres, Port: 5432, Username: mguser, Password: mgpassword, Database: mgledger
+volumes:
+  mg-erp-pgdata:
+    driver: local
+  db-data:
+    driver: local
