@@ -14,11 +14,22 @@ DATABASE_URL = os.getenv(
 
 # Print DB credentials for debugging
 parsed = urlparse(DATABASE_URL)
-print("DB HOST:", parsed.hostname)
-print("DB PORT:", parsed.port)
-print("DB USER:", parsed.username)
-print("DB PASSWORD:", parsed.password)
-print("DB NAME:", parsed.path.lstrip('/'))
+# print("DB HOST:", parsed.hostname)
+# print("DB PORT:", parsed.port)
+# print("DB USER:", parsed.username)
+# print("DB PASSWORD:", parsed.password)
+# print("DB NAME:", parsed.path.lstrip('/'))
 
 engine = create_async_engine(DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+# Async session generator
+async def get_session():
+    """Get async database session."""
+    async with SessionLocal() as session:
+        yield session
+
+# Create a direct session for initialization
+async def create_session():
+    """Create a new async database session."""
+    return SessionLocal()

@@ -1,0 +1,31 @@
+"""
+Test requirements file for MG-ERP API testing.
+Install these packages to run the test suite.
+"""
+
+# Core testing framework
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+
+# HTTP client for API testing
+httpx>=0.24.0
+
+# FastAPI testing utilities
+fastapi[all]>=0.100.0
+
+# Database testing (SQLite for isolated tests)
+sqlite3
+
+# Test coverage reporting
+pytest-cov>=4.1.0
+
+# Test fixtures and utilities
+pytest-mock>=3.11.0
+pytest-xdist>=3.3.0  # For parallel test execution
+
+# Performance testing (optional)
+pytest-benchmark>=4.0.0
+
+# Additional utilities
+requests>=2.31.0
+pydantic>=2.0.0
