@@ -9,6 +9,10 @@ from ..services.ledger import (
     get_all_transactions,
     create_transaction,
     get_transaction_by_id,
+    validate_transaction_data,
+    validate_transaction_integrity,
+    validate_all_transactions_integrity,
+    get_accounting_equation_status,
 )
 from ..auth.dependencies import require_permission
 from ..auth.schemas import CurrentUser
@@ -21,8 +25,8 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=List[TransactionResponse],
-           summary="📊 List All Transactions",
+@router.get("", response_model=List[TransactionResponse],
+           summary="[DATABASE] List All Transactions",
            description="""
            Retrieve all financial transactions with their journal entries.
            
@@ -75,7 +79,7 @@ async def list_transactions(
         raise HTTPException(status_code=500, detail="Failed to retrieve transactions")
 
 
-@router.post("/", response_model=TransactionSchema,
+@router.post("", response_model=TransactionSchema,
             summary="💰 Create New Transaction",
             description="""
             Record a new financial transaction with journal entries.
@@ -141,3 +145,160 @@ async def get_transaction(
     except Exception as e:
         logger.error(f"[ERROR] Error retrieving transaction ID={transaction_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to retrieve transaction")
+
+
+# ============================================================================
+# DOUBLE-ENTRY VALIDATION ENDPOINTS
+# ============================================================================
+
+@router.post("/validate", 
+            summary="🔍 Validate Transaction Data",
+            description="""
+            Comprehensive validation for transaction data before creation.
+            
+            **Permission Required:** `transaction:create`
+            
+            Performs enterprise-grade double-entry bookkeeping validation:
+            - ✅ Balance verification (Debits = Credits)
+            - ✅ Account existence and status checks
+            - ✅ Amount precision and formatting
+            - ✅ Accounting equation impact analysis
+            - ✅ Business logic validation
+            
+            Returns detailed validation results with errors and warnings.
+            """)
+async def validate_transaction(
+    transaction: TransactionSchema,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("transaction:create"))
+):
+    """Validate transaction data without creating it."""
+    logger.info(f"[VALIDATION] Validating transaction: '{transaction.description}' for user: {current_user.username}")
+    
+    try:
+        validation_result = await validate_transaction_data(db, transaction)
+        
+        return {
+            "is_valid": validation_result.is_valid,
+            "errors": validation_result.errors,
+            "warnings": validation_result.warnings,
+            "transaction_description": transaction.description,
+            "total_lines": len(transaction.lines),
+            "total_debits": sum(line.amount for line in transaction.lines if line.type == 'debit'),
+            "total_credits": sum(line.amount for line in transaction.lines if line.type == 'credit'),
+        }
+    except Exception as e:
+        logger.error(f"[ERROR] Error validating transaction: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to validate transaction")
+
+
+@router.get("/{transaction_id}/validate",
+           summary="🔍 Validate Existing Transaction",
+           description="""
+           Post-commit validation for existing transaction integrity.
+           
+           **Permission Required:** `transaction:read`
+           
+           Checks database integrity for a specific transaction:
+           - ✅ Balance verification at database level
+           - ✅ Account reference integrity
+           - ✅ Data consistency checks
+           """)
+async def validate_existing_transaction(
+    transaction_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("transaction:read"))
+):
+    """Validate integrity of an existing transaction."""
+    logger.info(f"[VALIDATION] Validating existing transaction ID={transaction_id} for user: {current_user.username}")
+    
+    try:
+        validation_result = await validate_transaction_integrity(db, transaction_id)
+        
+        return {
+            "transaction_id": transaction_id,
+            "is_valid": validation_result.is_valid,
+            "errors": validation_result.errors,
+            "warnings": validation_result.warnings,
+        }
+    except Exception as e:
+        logger.error(f"[ERROR] Error validating transaction ID={transaction_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to validate transaction")
+
+
+@router.get("/system/validate-all",
+           summary="🔍 System-Wide Validation",
+           description="""
+           Comprehensive system-wide transaction integrity validation.
+           
+           **Permission Required:** `system:audit`
+           
+           Performs complete audit of all transactions:
+           - ✅ Validates every transaction in the system
+           - ✅ Identifies data integrity issues
+           - ✅ Provides comprehensive audit report
+           
+           **Warning:** This is a resource-intensive operation.
+           """)
+async def validate_all_transactions(
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("system:audit"))
+):
+    """Validate integrity of all transactions in the system."""
+    logger.info(f"[VALIDATION] Starting system-wide validation for user: {current_user.username}")
+    
+    try:
+        validation_result = await validate_all_transactions_integrity(db)
+        
+        return {
+            "is_valid": validation_result.is_valid,
+            "errors": validation_result.errors,
+            "warnings": validation_result.warnings,
+            "total_errors": len(validation_result.errors),
+            "total_warnings": len(validation_result.warnings),
+        }
+    except Exception as e:
+        logger.error(f"[ERROR] Error during system-wide validation: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to perform system-wide validation")
+
+
+@router.get("/system/accounting-equation",
+           summary="📊 Accounting Equation Status",
+           description="""
+           Get current accounting equation status and balance.
+           
+           **Permission Required:** `financial:read`
+           
+           Returns fundamental accounting equation analysis:
+           - 📈 Assets = Liabilities + Equity
+           - 💰 Account type totals and balances
+           - 🏆 Retained earnings calculation
+           - ✅ Equation balance verification
+           """)
+async def get_accounting_equation(
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("financial:read"))
+):
+    """Get current accounting equation status."""
+    logger.info(f"[ACCOUNTING] Retrieving accounting equation status for user: {current_user.username}")
+    
+    try:
+        equation_status = await get_accounting_equation_status(db)
+        
+        # Convert Decimal to float for JSON serialization
+        return {
+            "assets": float(equation_status["assets"]),
+            "liabilities": float(equation_status["liabilities"]),
+            "equity": float(equation_status["equity"]),
+            "income": float(equation_status["income"]),
+            "expenses": float(equation_status["expenses"]),
+            "retained_earnings": float(equation_status["retained_earnings"]),
+            "total_equity": float(equation_status["total_equity"]),
+            "equation_balance": float(equation_status["equation_balance"]),
+            "equation_balanced": equation_status["equation_balanced"],
+            "equation_formula": "Assets = Liabilities + Equity",
+            "validation_threshold": 0.01,
+        }
+    except Exception as e:
+        logger.error(f"[ERROR] Error retrieving accounting equation: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve accounting equation status")

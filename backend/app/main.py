@@ -17,27 +17,27 @@ logger = setup_logging()
 app = FastAPI(
     title="MG-ERP Ledger API",
     description="""
-    ## 📊 Comprehensive Ledger Management System
+    ## [DATABASE] Comprehensive Ledger Management System
     
     A professional-grade ERP system for managing accounts and financial transactions with enterprise-level security.
     
-    ### 🔐 Authentication Required
+    ### [SECURITY] Authentication Required
     Most endpoints require authentication. Use the login endpoint to obtain a JWT token.
     
-    ### 🏛️ Key Features
+    ### [GOVERNANCE] Key Features
     * **Account Management** - Create, view, update, and manage chart of accounts
     * **Transaction Processing** - Record and track financial transactions with double-entry bookkeeping
     * **User Management** - Role-based access control with granular permissions
     * **JWT Authentication** - Secure token-based authentication system
     * **Role-Based Authorization** - Admin, Manager, Accountant, and Viewer roles
     
-    ### 🚀 Quick Start
+    ### [STARTUP] Quick Start
     1. **Login**: Use `/api/v1/auth/login` with default admin credentials (admin/admin123)
     2. **Get Token**: Copy the access_token from the response
     3. **Authorize**: Click the 🔒 Authorize button and paste your token
     4. **Explore**: Try the account and transaction endpoints
     
-    ### 👥 Default Roles
+    ### [ROLES] Default Roles
     * **Admin**: Full system access including user management
     * **Manager**: Business operations and reporting access
     * **Accountant**: Financial data entry and reporting
@@ -111,7 +111,7 @@ async def startup_event():
 app.include_router(api_router, prefix="/api/v1")
 
 # Health check endpoint
-@app.get("/", tags=["health"], summary="🏥 Basic Health Check", 
+@app.get("/", tags=["health"], summary="[HEALTH] Basic Health Check", 
          description="Simple health check endpoint to verify the API is running.")
 def health_check():
     """Health check endpoint."""
@@ -122,7 +122,7 @@ def health_check():
         "version": "1.0.0"
     }
 
-@app.get("/health", tags=["health"], summary="🔍 Detailed Health Check",
+@app.get("/health", tags=["health"], summary="[SEARCH] Detailed Health Check",
          description="""
          Comprehensive health check with system information and available endpoints.
          
@@ -149,7 +149,7 @@ def detailed_health_check():
         "default_credentials": {
             "username": "admin",
             "password": "admin123",
-            "note": "⚠️ Change in production!"
+            "note": "[WARNING] Change in production!"
         }
     }
 

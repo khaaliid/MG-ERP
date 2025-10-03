@@ -22,13 +22,18 @@ replacements = [
     ('🆔', '[ID]'),
     ('📄', '[DOCUMENT]'),
     ('🏦', '[ACCOUNT]'),
+    ('🔐', '[SECURITY]'),
+    ('🏛️', '[GOVERNANCE]'),
+    ('👥', '[ROLES]'),
 ]
 
 files_to_update = [
     'app/api/accounts.py',
     'app/api/transactions.py', 
     'app/services/ledger.py',
-    'app/dependencies.py'
+    'app/dependencies.py',
+    'app/main.py',
+    'app/api/router.py'
 ]
 
 for file_path in files_to_update:

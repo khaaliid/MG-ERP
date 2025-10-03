@@ -17,8 +17,8 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=List[AccountSchema], 
-           summary="📋 List All Accounts",
+@router.get("", response_model=List[AccountSchema], 
+           summary="[LIST] List All Accounts",
            description="""
            Retrieve all accounts in the chart of accounts.
            
@@ -45,7 +45,7 @@ async def list_accounts(
         raise HTTPException(status_code=500, detail="Failed to retrieve accounts")
 
 
-@router.post("/", response_model=AccountSchema,
+@router.post("", response_model=AccountSchema,
             summary="➕ Create New Account", 
             description="""
             Create a new account in the chart of accounts.
