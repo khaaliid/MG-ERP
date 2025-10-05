@@ -34,20 +34,20 @@ class Account(Base):
         return [line.transaction for line in self.lines]
 
 class TransactionSource(enum.Enum):
-    POS = "POS"
-    API = "API" 
-    IMPORT = "Import"
-    MANUAL = "Manual"
-    WEB = "Web"
+    POS = "pos"
+    API = "api" 
+    IMPORT = "import"
+    MANUAL = "MANUAL"
+    WEB = "web"
 
 class Transaction(Base):
     __tablename__ = "transactions" 
     id = Column(Integer, primary_key=True, index=True)
-    date = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    date = Column(DateTime, nullable=False, default=lambda: datetime.now())
     description = Column(String, nullable=False)
     source = Column(Enum(TransactionSource), nullable=False, default=TransactionSource.MANUAL)
     reference = Column(String, nullable=True)  # invoice ID, POS ticket, etc.
-    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now())
     created_by = Column(String, nullable=True)  # user ID or username
     lines = relationship("TransactionLine", back_populates="transaction", cascade="all, delete-orphan")
     
@@ -223,9 +223,16 @@ async def create_transaction(db: AsyncSession, transaction_data):
     logger.info(f"[SUCCESS] Transaction validation passed")
     
     try:
+        # Handle timezone conversion for date
+        transaction_date = transaction_data.date
+        if hasattr(transaction_date, 'tzinfo') and transaction_date.tzinfo is not None:
+            # Convert timezone-aware datetime to naive UTC
+            transaction_date = transaction_date.replace(tzinfo=None)
+            logger.debug(f"[TIMEZONE] Converted timezone-aware date to naive: {transaction_date}")
+        
         # Create transaction object
         transaction = Transaction(
-            date=transaction_data.date,
+            date=transaction_date,
             description=transaction_data.description,
             source=transaction_data.source if hasattr(transaction_data, 'source') else TransactionSource.MANUAL,
             reference=getattr(transaction_data, 'reference', None),

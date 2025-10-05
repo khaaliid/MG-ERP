@@ -65,7 +65,7 @@ async def list_transactions(
                 id=tx.id,
                 date=tx.date,
                 description=tx.description,
-                source=tx.source.value,
+                source=tx.source.value if hasattr(tx.source, 'value') else str(tx.source),
                 reference=tx.reference,
                 created_at=tx.created_at,
                 created_by=tx.created_by,
@@ -79,7 +79,7 @@ async def list_transactions(
         raise HTTPException(status_code=500, detail="Failed to retrieve transactions")
 
 
-@router.post("", response_model=TransactionSchema,
+@router.post("", response_model=TransactionResponse,
             summary="💰 Create New Transaction",
             description="""
             Record a new financial transaction with journal entries.
@@ -115,7 +115,30 @@ async def add_transaction(
     try:
         new_transaction = await create_transaction(db, transaction)
         logger.info(f"[SUCCESS] Successfully created transaction: ID={new_transaction.id}")
-        return new_transaction
+        
+        # Transform to response format
+        lines = [
+            TransactionLineResponse(
+                account_name=line.account.name,
+                account_type=line.account.type.value,
+                type=line.type,
+                amount=line.amount
+            )
+            for line in new_transaction.lines
+        ]
+        
+        response = TransactionResponse(
+            id=new_transaction.id,
+            date=new_transaction.date,
+            description=new_transaction.description,
+            source=new_transaction.source.value if hasattr(new_transaction.source, 'value') else str(new_transaction.source),
+            reference=new_transaction.reference,
+            created_at=new_transaction.created_at,
+            created_by=new_transaction.created_by,
+            lines=lines
+        )
+        
+        return response
     except ValueError as e:
         logger.warning(f"[WARNING] Business validation error creating transaction: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
@@ -124,7 +147,7 @@ async def add_transaction(
         raise HTTPException(status_code=500, detail="Failed to create transaction")
 
 
-@router.get("/{transaction_id}", response_model=TransactionSchema)
+@router.get("/{transaction_id}", response_model=TransactionResponse)
 async def get_transaction(
     transaction_id: int, 
     db: AsyncSession = Depends(get_db),
@@ -136,7 +159,30 @@ async def get_transaction(
         transaction = await get_transaction_by_id(db, transaction_id)
         if transaction:
             logger.info(f"[SUCCESS] Successfully retrieved transaction: ID={transaction.id}, Description='{transaction.description}'")
-            return transaction
+            
+            # Transform to response format
+            lines = [
+                TransactionLineResponse(
+                    account_name=line.account.name,
+                    account_type=line.account.type.value,
+                    type=line.type,
+                    amount=line.amount
+                )
+                for line in transaction.lines
+            ]
+            
+            response = TransactionResponse(
+                id=transaction.id,
+                date=transaction.date,
+                description=transaction.description,
+                source=transaction.source.value if hasattr(transaction.source, 'value') else str(transaction.source),
+                reference=transaction.reference,
+                created_at=transaction.created_at,
+                created_by=transaction.created_by,
+                lines=lines
+            )
+            
+            return response
         else:
             logger.warning(f"[WARNING] Transaction not found: ID={transaction_id}")
             raise HTTPException(status_code=404, detail="Transaction not found")

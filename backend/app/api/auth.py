@@ -8,7 +8,7 @@ import logging
 from ..dependencies import get_db
 from ..auth.dependencies import get_current_user, require_permission
 from ..auth.schemas import (
-    UserCreate, UserResponse, UserUpdate, TokenResponse, 
+    UserCreate, UserResponse, UserUpdate, TokenResponse, LoginResponse,
     CurrentUser, UserChangePassword
 )
 from ..auth.service import AuthService
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-@router.post("/login", response_model=TokenResponse, summary="🔐 User Login", 
+@router.post("/login", response_model=LoginResponse, summary="🔐 User Login", 
             description="""
             Authenticate user and receive JWT access token.
             
@@ -53,8 +53,26 @@ async def login(
         # Create tokens
         tokens = await AuthService.create_user_tokens(db, user)
         
+        # Create user response
+        user_permissions = [perm.name for perm in user.permissions] if user.permissions else []
+        user_data = CurrentUser(
+            id=user.id,
+            username=user.username,
+            email=user.email,
+            full_name=user.full_name,
+            is_active=user.is_active,
+            is_superuser=user.is_superuser,
+            role=user.role.name if user.role else "user",
+            permissions=user_permissions
+        )
+        
         logger.info(f"[SUCCESS] User logged in: {form_data.username}")
-        return TokenResponse(**tokens)
+        return LoginResponse(
+            access_token=tokens["access_token"],
+            refresh_token=tokens["refresh_token"],
+            token_type="bearer",
+            user=user_data
+        )
         
     except HTTPException:
         # Re-raise HTTPExceptions as-is (don't convert to 500)
