@@ -95,6 +95,17 @@ const Header: React.FC<HeaderProps> = ({ currentPage = 'transactions', currentRe
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
       )
+    },
+    {
+      name: 'Aging Report',
+      description: 'Account aging analysis',
+      href: '/reports/aging',
+      id: 'aging',
+      icon: (
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      )
     }
   ];
 
@@ -161,7 +172,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage = 'transactions', currentRe
                 <button
                   onClick={toggleReportsMenu}
                   className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    currentPage === 'reports'
+                    currentPage === 'reports' || showReportsMenu
                       ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                   }`}
@@ -171,7 +182,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage = 'transactions', currentRe
                   </svg>
                   <span>Reports</span>
                   <svg 
-                    className={`h-4 w-4 transition-transform ${showReportsMenu ? 'rotate-180' : ''}`} 
+                    className={`h-4 w-4 transition-transform duration-300 ${showReportsMenu ? 'rotate-180' : ''}`} 
                     fill="none" 
                     stroke="currentColor" 
                     viewBox="0 0 24 24"
@@ -182,7 +193,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage = 'transactions', currentRe
 
                 {/* Reports Dropdown Menu */}
                 {showReportsMenu && (
-                  <div className="absolute top-full left-0 mt-1 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                  <div className="absolute top-full left-0 mt-1 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 animate-in slide-in-from-top-2 duration-300">
                     <div className="py-2">
                       <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
                         Financial Reports

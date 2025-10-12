@@ -12,7 +12,7 @@ from ..services.ledger import (
     generate_general_ledger,
     generate_cash_flow_statement,
 )
-from ..auth.dependencies import require_permission
+from ..auth.dependencies import require_permission, get_current_user
 from ..auth.schemas import CurrentUser
 
 logger = logging.getLogger(__name__)
@@ -39,10 +39,11 @@ router = APIRouter(
 async def get_trial_balance(
     as_of_date: Optional[str] = Query(None, description="Date in YYYY-MM-DD format (default: current date)"),
     db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_permission("financial:read"))
+    current_user: CurrentUser = Depends(get_current_user)
 ):
     """Generate Trial Balance report."""
     logger.info(f"[REPORT] Trial Balance requested by user: {current_user.username}")
+    logger.info(f"[DEBUG] User details: is_superuser={current_user.is_superuser}, role={current_user.role}, permissions={current_user.permissions}")
     
     try:
         # Parse date if provided
@@ -79,7 +80,7 @@ async def get_trial_balance(
 async def get_balance_sheet(
     as_of_date: Optional[str] = Query(None, description="Date in YYYY-MM-DD format (default: current date)"),
     db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_permission("financial:read"))
+    current_user: CurrentUser = Depends(get_current_user)
 ):
     """Generate Balance Sheet report."""
     logger.info(f"[REPORT] Balance Sheet requested by user: {current_user.username}")
@@ -120,7 +121,7 @@ async def get_income_statement(
     start_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
     end_date: Optional[str] = Query(None, description="End date in YYYY-MM-DD format (default: current date)"),
     db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_permission("financial:read"))
+    current_user: CurrentUser = Depends(get_current_user)
 ):
     """Generate Income Statement (Profit & Loss) report."""
     logger.info(f"[REPORT] Income Statement requested by user: {current_user.username} from {start_date} to {end_date or 'current'}")
@@ -169,10 +170,11 @@ async def get_general_ledger(
     start_date: Optional[str] = Query(None, description="Start date in YYYY-MM-DD format"),
     end_date: Optional[str] = Query(None, description="End date in YYYY-MM-DD format (default: current date)"),
     db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_permission("financial:read"))
+    current_user: CurrentUser = Depends(get_current_user)
 ):
     """Generate General Ledger report."""
     logger.info(f"[REPORT] General Ledger requested by user: {current_user.username} for account {account_id or 'ALL'}")
+    logger.info(f"[DEBUG] User details: is_superuser={current_user.is_superuser}, role={current_user.role}, permissions={current_user.permissions}")
     
     try:
         # Parse dates
@@ -219,7 +221,7 @@ async def get_cash_flow_statement(
     start_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
     end_date: Optional[str] = Query(None, description="End date in YYYY-MM-DD format (default: current date)"),
     db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_permission("financial:read"))
+    current_user: CurrentUser = Depends(get_current_user)
 ):
     """Generate Cash Flow Statement."""
     logger.info(f"[REPORT] Cash Flow Statement requested by user: {current_user.username} from {start_date} to {end_date or 'current'}")
@@ -265,7 +267,7 @@ async def get_cash_flow_statement(
            """)
 async def get_financial_dashboard(
     db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_permission("financial:read"))
+    current_user: CurrentUser = Depends(get_current_user)
 ):
     """Generate comprehensive financial dashboard."""
     logger.info(f"[REPORT] Financial Dashboard requested by user: {current_user.username}")

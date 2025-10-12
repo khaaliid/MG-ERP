@@ -43,11 +43,11 @@ class TransactionSource(enum.Enum):
 class Transaction(Base):
     __tablename__ = "transactions" 
     id = Column(Integer, primary_key=True, index=True)
-    date = Column(DateTime, nullable=False, default=lambda: datetime.now())
+    date = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
     description = Column(String, nullable=False)
     source = Column(Enum(TransactionSource), nullable=False, default=TransactionSource.MANUAL)
     reference = Column(String, nullable=True)  # invoice ID, POS ticket, etc.
-    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now())
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
     created_by = Column(String, nullable=True)  # user ID or username
     lines = relationship("TransactionLine", back_populates="transaction", cascade="all, delete-orphan")
     
@@ -664,6 +664,9 @@ async def generate_trial_balance(db: AsyncSession, as_of_date: datetime = None) 
     if as_of_date is None:
         as_of_date = datetime.now(timezone.utc)
     
+    # Convert timezone-aware datetime to naive for database comparison
+    as_of_date_naive = as_of_date.replace(tzinfo=None) if as_of_date.tzinfo else as_of_date
+    
     # Query all accounts with their transaction totals up to the specified date
     query = select(
         Account.id,
@@ -680,7 +683,7 @@ async def generate_trial_balance(db: AsyncSession, as_of_date: datetime = None) 
             )
         )
     ).where(
-        (Transaction.date <= as_of_date) | (Transaction.date.is_(None))
+        (Transaction.date <= as_of_date_naive) | (Transaction.date.is_(None))
     ).group_by(
         Account.id, Account.name, Account.code, Account.type
     ).order_by(Account.code)
@@ -829,6 +832,10 @@ async def generate_income_statement(db: AsyncSession, start_date: datetime, end_
     
     logger.info(f"[REPORT] Generating Income Statement from {start_date} to {end_date}")
     
+    # Convert timezone-aware datetimes to naive for database comparison
+    start_date_naive = start_date.replace(tzinfo=None) if start_date.tzinfo else start_date
+    end_date_naive = end_date.replace(tzinfo=None) if end_date.tzinfo else end_date
+    
     # Query income and expense accounts for the period
     query = select(
         Account.id,
@@ -846,8 +853,8 @@ async def generate_income_statement(db: AsyncSession, start_date: datetime, end_
         )
     ).where(
         Account.type.in_([AccountType.INCOME, AccountType.EXPENSE]),
-        Transaction.date >= start_date,
-        Transaction.date <= end_date
+        Transaction.date >= start_date_naive,
+        Transaction.date <= end_date_naive
     ).group_by(
         Account.id, Account.name, Account.code, Account.type
     ).order_by(Account.type, Account.code)
@@ -917,6 +924,10 @@ async def generate_general_ledger(db: AsyncSession, account_id: int = None, star
     
     logger.info(f"[REPORT] Generating General Ledger for account {account_id or 'ALL'} from {start_date} to {end_date}")
     
+    # Convert timezone-aware datetimes to naive for database comparison
+    start_date_naive = start_date.replace(tzinfo=None) if start_date.tzinfo else start_date
+    end_date_naive = end_date.replace(tzinfo=None) if end_date.tzinfo else end_date
+    
     # Base query for transactions
     query = select(
         Transaction.id.label('transaction_id'),
@@ -936,8 +947,8 @@ async def generate_general_ledger(db: AsyncSession, account_id: int = None, star
             )
         )
     ).where(
-        Transaction.date >= start_date,
-        Transaction.date <= end_date
+        Transaction.date >= start_date_naive,
+        Transaction.date <= end_date_naive
     )
     
     # Filter by specific account if provided
@@ -1003,6 +1014,9 @@ async def calculate_retained_earnings(db: AsyncSession, as_of_date: datetime) ->
     """
     Calculate retained earnings (accumulated net income) as of a specific date
     """
+    # Convert timezone-aware datetime to naive for database comparison
+    as_of_date_naive = as_of_date.replace(tzinfo=None) if as_of_date.tzinfo else as_of_date
+    
     # Get all income and expense transactions up to the date
     query = select(
         func.coalesce(func.sum(case((and_(Account.type == AccountType.INCOME, TransactionLine.type == 'credit'), TransactionLine.amount), else_=0)), 0).label('income_credits'),
@@ -1016,7 +1030,7 @@ async def calculate_retained_earnings(db: AsyncSession, as_of_date: datetime) ->
             Account.__table__, TransactionLine.account_id == Account.id
         )
     ).where(
-        Transaction.date <= as_of_date,
+        Transaction.date <= as_of_date_naive,
         Account.type.in_([AccountType.INCOME, AccountType.EXPENSE])
     )
     
@@ -1040,6 +1054,10 @@ async def generate_cash_flow_statement(db: AsyncSession, start_date: datetime, e
         end_date = datetime.now(timezone.utc)
     
     logger.info(f"[REPORT] Generating Cash Flow Statement from {start_date} to {end_date}")
+    
+    # Convert timezone-aware datetimes to naive for database comparison
+    start_date_naive = start_date.replace(tzinfo=None) if start_date.tzinfo else start_date
+    end_date_naive = end_date.replace(tzinfo=None) if end_date.tzinfo else end_date
     
     # Find cash accounts (assuming accounts with "cash" in the name)
     cash_accounts_query = select(Account).where(
@@ -1076,8 +1094,8 @@ async def generate_cash_flow_statement(db: AsyncSession, start_date: datetime, e
             )
         ).where(
             TransactionLine.account_id == cash_account.id,
-            Transaction.date >= start_date,
-            Transaction.date <= end_date
+            Transaction.date >= start_date_naive,
+            Transaction.date <= end_date_naive
         ).order_by(Transaction.date)
         
         result = await db.execute(query)
