@@ -6,7 +6,7 @@ A comprehensive microservices-based ERP system designed for Small to Medium Ente
 
 This ERP system consists of three independent microservices:
 
-### 1. **Core ERP & Ledger** (Port 8000 & 3000)
+### 1. **Ledger Service** (Port 8000 & 5173)
 - 🏦 **Enterprise Double-Entry Bookkeeping**: Automatic validation ensuring debits equal credits
 - 🔍 **Comprehensive Transaction Validation**: Pre-commit and post-commit integrity checks
 - 📊 **Accounting Equation Monitoring**: Real-time Assets = Liabilities + Equity verification
@@ -31,8 +31,10 @@ This ERP system consists of three independent microservices:
 ## 📁 **Directory Structure**
 ```
 MG-ERP/
-├── backend/              # Core ERP & Ledger Backend (Port 8000)
-├── frontend/             # Core ERP Frontend (Port 3000)
+├── ledger/               # Standalone Ledger Microservice
+│   ├── backend/          # Ledger Backend (Port 8000)
+│   ├── frontend/         # Ledger Frontend (Port 5173)
+│   └── db/               # Ledger Database Config
 ├── pos/
 │   ├── backend/          # POS Backend (Port 8001)
 │   └── frontend/         # POS Frontend (Port 3001)
@@ -96,11 +98,11 @@ This starts:
 - PostgreSQL (`mguser`/`mgpassword`, database: `mgledger`)
 - pgAdmin web interface at `http://localhost:5050`
 
-### **2. Core ERP & Ledger Setup**
+### **2. Ledger Service Setup**
 
 **Backend (Port 8000):**
 ```bash
-cd backend
+cd ledger/backend
 py -m venv venv
 .\venv\Scripts\Activate.ps1  # Windows PowerShell
 # source venv/bin/activate   # Linux/Mac
@@ -108,14 +110,14 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-**Frontend (Port 3000):**
+**Frontend (Port 5173):**
 ```bash
-cd frontend
+cd ledger/frontend
 npm install
 npm run dev
 ```
 
-Access at: `http://localhost:3000`
+Access at: `http://localhost:5173`
 
 ### **3. Point of Sale (POS) Setup**
 
@@ -582,13 +584,13 @@ Your ledger system now provides:
 cd db && docker compose up -d
 ```
 
-**2. Core ERP:**
+**2. Ledger Service:**
 ```bash
 # Backend
-cd backend && .\venv\Scripts\Activate.ps1 && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+cd ledger/backend && .\venv\Scripts\Activate.ps1 && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 # Frontend (new terminal)
-cd frontend && npm run dev
+cd ledger/frontend && npm run dev
 ```
 
 **3. POS System:**
@@ -610,11 +612,11 @@ cd inventory/frontend && npm run dev
 ```
 
 ### **Access Points**
-- **Core ERP**: http://localhost:3000
+- **Ledger Service**: http://localhost:5173
 - **POS System**: http://localhost:3001  
 - **Inventory**: http://localhost:3002
 - **API Documentation**: 
-  - Core: http://localhost:8000/docs
+  - Ledger: http://localhost:8000/docs
   - POS: http://localhost:8001/docs
   - Inventory: http://localhost:8002/docs
 - **Database Admin**: http://localhost:5050
