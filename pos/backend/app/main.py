@@ -51,12 +51,24 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     """Initialize database tables on application startup."""
+    from sqlalchemy import text
+    
     logger.info("[STARTUP] Starting MG-ERP POS System...")
     try:
         async with engine.begin() as conn:
+            # Create schema first
+            logger.info("[SCHEMA] Creating pos schema if it doesn't exist...")
+            await conn.execute(text("CREATE SCHEMA IF NOT EXISTS pos;"))
+            await conn.execute(text("GRANT ALL ON SCHEMA pos TO mguser;"))
+            logger.info("[SUCCESS] Schema 'pos' created or already exists")
+            
             logger.info("[DATABASE] Creating POS database tables...")
             await conn.run_sync(Base.metadata.create_all)
-            logger.info("[SUCCESS] POS database tables created successfully")
+            
+            # Grant permissions on tables and sequences
+            await conn.execute(text("GRANT ALL ON ALL TABLES IN SCHEMA pos TO mguser;"))
+            await conn.execute(text("GRANT ALL ON ALL SEQUENCES IN SCHEMA pos TO mguser;"))
+            logger.info("[SUCCESS] POS database tables created successfully in pos schema")
     except Exception as e:
         logger.error(f"[ERROR] Failed to initialize POS database: {str(e)}")
         raise

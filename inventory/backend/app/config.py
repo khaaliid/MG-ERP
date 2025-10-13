@@ -4,7 +4,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Settings:
-    database_url: str = os.getenv("DATABASE_URL", "postgresql://postgres:password@localhost:5432/mg_erp")
+    DATABASE_URL: str = os.getenv(
+        "DATABASE_URL",
+        "postgresql+asyncpg://mguser:mgpassword@localhost/mgerp"
+    )
     secret_key: str = os.getenv("SECRET_KEY", "your-secret-key-here")
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30

@@ -7,6 +7,9 @@ import enum
 
 Base = declarative_base()
 
+# Schema configuration
+SCHEMA_NAME = "inventory"
+
 class SizeType(enum.Enum):
     CLOTHING = "clothing"  # S, M, L, XL, XXL
     NUMERIC = "numeric"    # 30, 32, 34, etc.
@@ -14,6 +17,7 @@ class SizeType(enum.Enum):
 
 class Category(Base):
     __tablename__ = "categories"
+    __table_args__ = {'schema': SCHEMA_NAME}
     
     id = Column(String, primary_key=True, default=lambda: str(uuid4()))
     name = Column(String(100), nullable=False, unique=True)
@@ -27,6 +31,7 @@ class Category(Base):
 
 class Brand(Base):
     __tablename__ = "brands"
+    __table_args__ = {'schema': SCHEMA_NAME}
     
     id = Column(String, primary_key=True, default=lambda: str(uuid4()))
     name = Column(String(100), nullable=False, unique=True)
@@ -40,6 +45,7 @@ class Brand(Base):
 
 class Supplier(Base):
     __tablename__ = "suppliers"
+    __table_args__ = {'schema': SCHEMA_NAME}
     
     id = Column(String, primary_key=True, default=lambda: str(uuid4()))
     name = Column(String(100), nullable=False)
@@ -57,6 +63,7 @@ class Supplier(Base):
 
 class Product(Base):
     __tablename__ = "products"
+    __table_args__ = {'schema': SCHEMA_NAME}
     
     id = Column(String, primary_key=True, default=lambda: str(uuid4()))
     name = Column(String(200), nullable=False)
@@ -74,9 +81,9 @@ class Product(Base):
     season = Column(String(20))  # Spring/Summer, Fall/Winter
     
     # Relationships
-    category_id = Column(String, ForeignKey("categories.id"), nullable=False)
-    brand_id = Column(String, ForeignKey("brands.id"))
-    supplier_id = Column(String, ForeignKey("suppliers.id"))
+    category_id = Column(String, ForeignKey(f"{SCHEMA_NAME}.categories.id"), nullable=False)
+    brand_id = Column(String, ForeignKey(f"{SCHEMA_NAME}.brands.id"))
+    supplier_id = Column(String, ForeignKey(f"{SCHEMA_NAME}.suppliers.id"))
     
     category = relationship("Category", back_populates="products")
     brand = relationship("Brand", back_populates="products")
@@ -91,9 +98,10 @@ class Product(Base):
 
 class StockItem(Base):
     __tablename__ = "stock_items"
+    __table_args__ = {'schema': SCHEMA_NAME}
     
     id = Column(String, primary_key=True, default=lambda: str(uuid4()))
-    product_id = Column(String, ForeignKey("products.id"), nullable=False)
+    product_id = Column(String, ForeignKey(f"{SCHEMA_NAME}.products.id"), nullable=False)
     size = Column(String(10), nullable=False)
     quantity = Column(Integer, nullable=False, default=0)
     reorder_level = Column(Integer, default=5)
@@ -111,9 +119,10 @@ class StockItem(Base):
 
 class PurchaseOrder(Base):
     __tablename__ = "purchase_orders"
+    __table_args__ = {'schema': SCHEMA_NAME}
     
     id = Column(String, primary_key=True, default=lambda: str(uuid4()))
-    supplier_id = Column(String, ForeignKey("suppliers.id"), nullable=False)
+    supplier_id = Column(String, ForeignKey(f"{SCHEMA_NAME}.suppliers.id"), nullable=False)
     order_number = Column(String(50), unique=True)
     status = Column(String(20), default="pending")  # pending, ordered, received, cancelled
     order_date = Column(DateTime, server_default=func.now())
@@ -131,10 +140,11 @@ class PurchaseOrder(Base):
 
 class PurchaseOrderItem(Base):
     __tablename__ = "purchase_order_items"
+    __table_args__ = {'schema': SCHEMA_NAME}
     
     id = Column(String, primary_key=True, default=lambda: str(uuid4()))
-    purchase_order_id = Column(String, ForeignKey("purchase_orders.id"), nullable=False)
-    product_id = Column(String, ForeignKey("products.id"), nullable=False)
+    purchase_order_id = Column(String, ForeignKey(f"{SCHEMA_NAME}.purchase_orders.id"), nullable=False)
+    product_id = Column(String, ForeignKey(f"{SCHEMA_NAME}.products.id"), nullable=False)
     size = Column(String(10), nullable=False)
     quantity_ordered = Column(Integer, nullable=False)
     quantity_received = Column(Integer, default=0)
@@ -151,9 +161,10 @@ class PurchaseOrderItem(Base):
 
 class StockMovement(Base):
     __tablename__ = "stock_movements"
+    __table_args__ = {'schema': SCHEMA_NAME}
     
     id = Column(String, primary_key=True, default=lambda: str(uuid4()))
-    product_id = Column(String, ForeignKey("products.id"), nullable=False)
+    product_id = Column(String, ForeignKey(f"{SCHEMA_NAME}.products.id"), nullable=False)
     size = Column(String(10), nullable=False)
     movement_type = Column(String(20), nullable=False)  # purchase, sale, adjustment, return
     quantity_change = Column(Integer, nullable=False)  # Positive for inbound, negative for outbound

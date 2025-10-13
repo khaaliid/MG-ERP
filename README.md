@@ -85,6 +85,20 @@ The ledger now includes **enterprise-grade automatic double-entry validation**:
 - PostgreSQL 13+
 - Git
 
+### **Quick Setup (Recommended)**
+Use the automated setup scripts:
+
+**Windows PowerShell:**
+```powershell
+.\setup_services.ps1
+```
+
+**Linux/Mac:**
+```bash
+chmod +x setup_services.sh
+./setup_services.sh
+```
+
 ### **1. Database Setup (PostgreSQL)**
 
 Start the shared PostgreSQL database using Docker Compose:
@@ -95,7 +109,7 @@ docker compose up -d
 ```
 
 This starts:
-- PostgreSQL (`mguser`/`mgpassword`, database: `mgledger`)
+- PostgreSQL (`mguser`/`mgpassword`, database: `mgerp`)
 - pgAdmin web interface at `http://localhost:5050`
 
 ### **2. Ledger Service Setup**
@@ -330,9 +344,9 @@ Access at: `http://localhost:3002`
 
 Each service can be configured via environment variables:
 
-### **Core ERP (.env)**
+### **Ledger (.env)**
 ```env
-DATABASE_URL=postgresql://mguser:mgpassword@localhost:5432/mgledger
+DATABASE_URL=postgresql://mguser:mgpassword@localhost:5432/mgerp
 SECRET_KEY=your-secret-key-here
 JWT_ALGORITHM=HS256
 JWT_EXPIRE_MINUTES=30
@@ -340,14 +354,14 @@ JWT_EXPIRE_MINUTES=30
 
 ### **POS (.env)**
 ```env
-DATABASE_URL=postgresql://mguser:mgpassword@localhost:5432/mgledger
+DATABASE_URL=postgresql://mguser:mgpassword@localhost:5432/mgerp
 SECRET_KEY=your-secret-key-here
 ERP_API_URL=http://localhost:8000
 ```
 
 ### **Inventory (.env)**
 ```env
-DATABASE_URL=postgresql://mguser:mgpassword@localhost:5432/mgledger
+DATABASE_URL=postgresql://mguser:mgpassword@localhost:5432/mgerp
 SECRET_KEY=your-secret-key-here
 ERP_API_URL=http://localhost:8000
 ```
@@ -448,16 +462,16 @@ curl -X GET "http://localhost:8000/api/v1/reports/dashboard" \
 
 ## Environment Variables
 
-You can override the backend database connection by creating a `.env` file in `backend/app/`:
+You can override the backend database connection by creating a `.env` file in each service directory:
 
 ```
-DATABASE_URL=postgresql+asyncpg://mguser:mgpassword@localhost/mgledger
+DATABASE_URL=postgresql+asyncpg://mguser:mgpassword@localhost/mgerp
 ```
 
 If running backend inside Docker Compose, use:
 
 ```
-DATABASE_URL=postgresql+asyncpg://mguser:mgpassword@postgres/mgledger
+DATABASE_URL=postgresql+asyncpg://mguser:mgpassword@postgres/mgerp
 ```
 
 ---
@@ -628,7 +642,7 @@ cd inventory/frontend && npm run dev
 - Ensure PostgreSQL database is running before starting any backend services
 - All services share the same database for data consistency
 - Virtual environments are recommended for Python backend services
-- Default database credentials: `mguser`/`mgpassword`, database: `mgledger`
+- Default database credentials: `mguser`/`mgpassword`, database: `mgerp`
 - For production deployment, update all secret keys and database credentials
 - System supports concurrent users across all microservices
 - Regular database backups recommended for production use
@@ -648,3 +662,39 @@ This ERP system provides:
 - ✅ **Comprehensive audit trails** and business intelligence
 
 The system is ready to handle real-world business operations with confidence and professional-grade reliability! 🚀
+
+---
+
+## 🔧 **Troubleshooting**
+
+### **Common Issues**
+
+#### **ModuleNotFoundError: No module named 'asyncpg'**
+```bash
+# Navigate to the service backend directory
+cd [service]/backend
+
+# Activate virtual environment
+.\venv\Scripts\Activate.ps1  # Windows
+# source venv/bin/activate    # Linux/Mac
+
+# Install missing dependency
+pip install asyncpg==0.29.0
+```
+
+#### **Database Connection Issues**
+- Ensure PostgreSQL is running: `docker compose up -d` in the `db` directory
+- Check database credentials in environment variables
+- Verify database name is `mgerp` and schemas are auto-created
+
+#### **Port Already in Use**
+- Ledger: Port 8000
+- POS: Port 8001  
+- Inventory: Port 8002
+- Frontend services use different ports (3000+, 5173)
+
+#### **Schema Not Found**
+Schemas are created automatically on service startup. If you see schema errors:
+1. Stop the service
+2. Restart with `uvicorn app.main:app --reload --port [PORT]`
+3. Check logs for schema creation messages

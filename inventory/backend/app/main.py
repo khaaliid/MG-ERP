@@ -1,11 +1,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .routes.inventory_routes import router as inventory_router
-from .database import create_tables
+from .database import create_schema_and_tables
+import logging
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="MG-ERP Inventory Management System",
-    description="Inventory management microservice for menswear shop",
+    description="Inventory management microservice for menswear shop with inventory schema",
     version="1.0.0"
 )
 
@@ -23,7 +26,13 @@ app.include_router(inventory_router, prefix="/api/v1")
 
 @app.on_event("startup")
 async def startup_event():
-    create_tables()
+    logger.info("[STARTUP] Starting Inventory Management System...")
+    try:
+        await create_schema_and_tables()
+        logger.info("[SUCCESS] Inventory schema and tables created successfully")
+    except Exception as e:
+        logger.error(f"[ERROR] Failed to initialize inventory database: {str(e)}")
+        raise
 
 @app.get("/")
 async def root():

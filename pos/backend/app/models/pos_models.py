@@ -6,8 +6,12 @@ import enum
 
 Base = declarative_base()
 
+# Schema configuration
+SCHEMA_NAME = "pos"
+
 class ProductCategory(Base):
     __tablename__ = "product_categories"
+    __table_args__ = {'schema': SCHEMA_NAME}
     
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False, unique=True)
@@ -20,6 +24,7 @@ class ProductCategory(Base):
 
 class Product(Base):
     __tablename__ = "products"
+    __table_args__ = {'schema': SCHEMA_NAME}
     
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(200), nullable=False)
@@ -30,7 +35,7 @@ class Product(Base):
     cost = Column(Float, nullable=True)
     stock_quantity = Column(Integer, default=0)
     min_stock_level = Column(Integer, default=0)
-    category_id = Column(Integer, ForeignKey("product_categories.id"), nullable=True)
+    category_id = Column(Integer, ForeignKey(f"{SCHEMA_NAME}.product_categories.id"), nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
@@ -41,6 +46,7 @@ class Product(Base):
 
 class Sale(Base):
     __tablename__ = "sales"
+    __table_args__ = {'schema': SCHEMA_NAME}
     
     id = Column(Integer, primary_key=True, index=True)
     sale_number = Column(String(50), unique=True, nullable=False)
@@ -66,10 +72,11 @@ class Sale(Base):
 
 class SaleItem(Base):
     __tablename__ = "sale_items"
+    __table_args__ = {'schema': SCHEMA_NAME}
     
     id = Column(Integer, primary_key=True, index=True)
-    sale_id = Column(Integer, ForeignKey("sales.id"), nullable=False)
-    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    sale_id = Column(Integer, ForeignKey(f"{SCHEMA_NAME}.sales.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey(f"{SCHEMA_NAME}.products.id"), nullable=False)
     quantity = Column(Integer, nullable=False)
     unit_price = Column(Float, nullable=False)
     line_total = Column(Float, nullable=False)
