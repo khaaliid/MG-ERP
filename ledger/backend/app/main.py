@@ -92,13 +92,25 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     """Initialize database tables on application startup."""
+    from sqlalchemy import text
+    
     logger.info("[STARTUP] Starting MG-ERP Ledger API...")
     try:
         async with engine.begin() as conn:
+            # Create schema first
+            logger.info("[SCHEMA] Creating ledger schema if it doesn't exist...")
+            await conn.execute(text("CREATE SCHEMA IF NOT EXISTS ledger;"))
+            await conn.execute(text("GRANT ALL ON SCHEMA ledger TO mguser;"))
+            logger.info("[SUCCESS] Schema 'ledger' created or already exists")
+            
             logger.info("[DATABASE] Checking and creating database tables if needed...")
             # Only create tables if they don't exist (no drop)
             await conn.run_sync(Base.metadata.create_all)
-            logger.info("[SUCCESS] Database tables ensured successfully")
+            
+            # Grant permissions on tables and sequences
+            await conn.execute(text("GRANT ALL ON ALL TABLES IN SCHEMA ledger TO mguser;"))
+            await conn.execute(text("GRANT ALL ON ALL SEQUENCES IN SCHEMA ledger TO mguser;"))
+            logger.info("[SUCCESS] Database tables ensured successfully in ledger schema")
         
         logger.info("[INFO] Authentication system will be initialized on first request")
         

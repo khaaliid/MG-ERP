@@ -11,6 +11,9 @@ logger = logging.getLogger(__name__)
 
 Base = declarative_base()
 
+# Schema configuration
+SCHEMA_NAME = "ledger"
+
 class AccountType(enum.Enum):
     ASSET = "asset"
     LIABILITY = "liability"
@@ -20,6 +23,7 @@ class AccountType(enum.Enum):
 
 class Account(Base):
     __tablename__ = "accounts"
+    __table_args__ = {'schema': SCHEMA_NAME}
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False, unique=True)
     code = Column(String, nullable=False, unique=True)
@@ -41,7 +45,8 @@ class TransactionSource(enum.Enum):
     WEB = "web"
 
 class Transaction(Base):
-    __tablename__ = "transactions" 
+    __tablename__ = "transactions"
+    __table_args__ = {'schema': SCHEMA_NAME} 
     id = Column(Integer, primary_key=True, index=True)
     date = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
     description = Column(String, nullable=False)
@@ -59,20 +64,21 @@ class Transaction(Base):
 class TransactionLine(Base):
     __tablename__ = "transaction_lines"
     id = Column(Integer, primary_key=True, index=True)
-    transaction_id = Column(Integer, ForeignKey("transactions.id", ondelete="CASCADE"), index=True)
-    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    transaction_id = Column(Integer, ForeignKey(f"{SCHEMA_NAME}.transactions.id", ondelete="CASCADE"), index=True)
+    account_id = Column(Integer, ForeignKey(f"{SCHEMA_NAME}.accounts.id"), nullable=False, index=True)
     type = Column(String, nullable=False, index=True)
     amount = Column(Float, nullable=False)
     transaction = relationship("Transaction", back_populates="lines")
     account = relationship("Account", back_populates="lines")
     
-    # Add composite indexes for common queries
+    # Add composite indexes for common queries and schema
     __table_args__ = (
         Index('idx_transaction_account', 'transaction_id', 'account_id'),
         Index('idx_account_type', 'account_id', 'type'),
         # Database-level constraints for double-entry validation
         CheckConstraint('amount > 0', name='check_positive_amount'),
         CheckConstraint("type IN ('debit', 'credit')", name='check_valid_type'),
+        {'schema': SCHEMA_NAME}
     )
 
     @validates('amount')

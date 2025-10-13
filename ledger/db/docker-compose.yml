@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_USER: mguser
       POSTGRES_PASSWORD: mgpassword
-      POSTGRES_DB: mgledger
+      POSTGRES_DB: mgerp
     volumes:
       - mg-erp-pgdata:/var/lib/postgresql/data
     ports:
@@ -25,7 +25,7 @@ services:
     ports:
       - "8088:80"
     # To connect in pgAdmin, use:
-    # Host: postgres, Port: 5432, Username: mguser, Password: mgpassword, Database: mgledger
+    # Host: postgres, Port: 5432, Username: mguser, Password: mgpassword, Database: mgerp
 volumes:
   mg-erp-pgdata:
     driver: local

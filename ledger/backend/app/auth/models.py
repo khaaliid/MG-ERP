@@ -9,22 +9,28 @@ from ..services.ledger import Base
 
 logger = logging.getLogger(__name__)
 
+# Schema configuration
+SCHEMA_NAME = "ledger"
+
 # Association table for user permissions (direct assignment)
 user_permissions = Table(
     'user_permissions', Base.metadata,
-    Column('user_id', Integer, ForeignKey('users.id'), primary_key=True),
-    Column('permission_id', Integer, ForeignKey('permissions.id'), primary_key=True)
+    Column('user_id', Integer, ForeignKey(f'{SCHEMA_NAME}.users.id'), primary_key=True),
+    Column('permission_id', Integer, ForeignKey(f'{SCHEMA_NAME}.permissions.id'), primary_key=True),
+    schema=SCHEMA_NAME
 )
 
 # Association table for role permissions
 role_permissions = Table(
     'role_permissions', Base.metadata,
-    Column('role_id', Integer, ForeignKey('roles.id'), primary_key=True),
-    Column('permission_id', Integer, ForeignKey('permissions.id'), primary_key=True)
+    Column('role_id', Integer, ForeignKey(f'{SCHEMA_NAME}.roles.id'), primary_key=True),
+    Column('permission_id', Integer, ForeignKey(f'{SCHEMA_NAME}.permissions.id'), primary_key=True),
+    schema=SCHEMA_NAME
 )
 
 class Permission(Base):
     __tablename__ = "permissions"
+    __table_args__ = {'schema': SCHEMA_NAME}
     
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, nullable=False)
@@ -37,6 +43,7 @@ class Permission(Base):
 
 class Role(Base):
     __tablename__ = "roles"
+    __table_args__ = {'schema': SCHEMA_NAME}
     
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, nullable=False)
@@ -48,6 +55,7 @@ class Role(Base):
 
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = {'schema': SCHEMA_NAME}
     
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, nullable=False, index=True)
@@ -59,7 +67,7 @@ class User(Base):
     created_at = Column(DateTime, default=lambda: datetime.now())
     last_login = Column(DateTime, nullable=True)
     
-    role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
+    role_id = Column(Integer, ForeignKey(f"{SCHEMA_NAME}.roles.id"), nullable=False)
     role = relationship("Role", back_populates="users")
     permissions = relationship("Permission", secondary=user_permissions, back_populates="users")
     
@@ -68,9 +76,10 @@ class User(Base):
 
 class UserSession(Base):
     __tablename__ = "user_sessions"
+    __table_args__ = {'schema': SCHEMA_NAME}
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey(f"{SCHEMA_NAME}.users.id"), nullable=False)
     refresh_token = Column(Text, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now())
     expires_at = Column(DateTime, nullable=False)

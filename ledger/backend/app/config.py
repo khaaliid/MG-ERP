@@ -9,7 +9,7 @@ load_dotenv()
 # Use 'localhost' if running FastAPI outside Docker
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql+asyncpg://mguser:mgpassword@localhost/mgledger"
+    "postgresql+asyncpg://mguser:mgpassword@localhost/mgerp"
 )
 
 # Print DB credentials for debugging
@@ -22,6 +22,9 @@ parsed = urlparse(DATABASE_URL)
 
 engine = create_async_engine(DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+# Schema configuration
+LEDGER_SCHEMA = "ledger"
 
 # Async session generator
 async def get_session():
