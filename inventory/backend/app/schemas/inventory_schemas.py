@@ -1,18 +1,41 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, validator
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
 
 class SizeTypeEnum(str, Enum):
-    CLOTHING = "clothing"
+    CLOTHING = "CLOTHING"
     NUMERIC = "numeric"
     SHOE = "shoe"
+
+# Size/Stock Schemas for Product Creation
+class ProductSizeCreate(BaseModel):
+    size: str
+    quantity: int = 0
+    reorder_level: int = Field(default=5, alias='reorderLevel')
+    max_stock_level: int = Field(default=100, alias='maxStockLevel')
+    location: Optional[str] = None
+    
+    class Config:
+        allow_population_by_field_name = True
+
+class ProductSize(BaseModel):
+    size: str
+    quantity: int
+    reorder_level: int
+    max_stock_level: int
+    
+    class Config:
+        from_attributes = True
 
 # Category Schemas
 class CategoryBase(BaseModel):
     name: str
     description: Optional[str] = None
-    size_type: SizeTypeEnum = SizeTypeEnum.CLOTHING
+    size_type: SizeTypeEnum = Field(default=SizeTypeEnum.CLOTHING, alias='sizeType')
+    
+    class Config:
+        allow_population_by_field_name = True
 
 class CategoryCreate(CategoryBase):
     pass
@@ -20,15 +43,20 @@ class CategoryCreate(CategoryBase):
 class CategoryUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
-    size_type: Optional[SizeTypeEnum] = None
+    size_type: Optional[SizeTypeEnum] = Field(default=None, alias='sizeType')
+    
+    class Config:
+        allow_population_by_field_name = True
 
 class Category(CategoryBase):
     id: str
-    created_at: datetime
-    updated_at: datetime
+    created_at: datetime = Field(alias='createdAt')
+    updated_at: datetime = Field(alias='updatedAt')
 
     class Config:
         from_attributes = True
+        allow_population_by_field_name = True
+        populate_by_name = True
 
 # Brand Schemas
 class BrandBase(BaseModel):
@@ -46,39 +74,51 @@ class BrandUpdate(BaseModel):
 
 class Brand(BrandBase):
     id: str
-    created_at: datetime
-    updated_at: datetime
+    created_at: datetime = Field(alias='createdAt')
+    updated_at: datetime = Field(alias='updatedAt')
 
     class Config:
         from_attributes = True
+        allow_population_by_field_name = True
+        populate_by_name = True
 
 # Supplier Schemas
 class SupplierBase(BaseModel):
     name: str
-    contact_person: Optional[str] = None
+    contact_person: Optional[str] = Field(default=None, alias='contactPerson')
     email: Optional[str] = None
     phone: Optional[str] = None
     address: Optional[str] = None
-    lead_time_days: int = 7
+    lead_time_days: int = Field(default=7, alias='leadTimeDays')
+    
+    class Config:
+        allow_population_by_field_name = True
+        populate_by_name = True
 
 class SupplierCreate(SupplierBase):
     pass
 
 class SupplierUpdate(BaseModel):
     name: Optional[str] = None
-    contact_person: Optional[str] = None
+    contact_person: Optional[str] = Field(default=None, alias='contactPerson')
     email: Optional[str] = None
     phone: Optional[str] = None
     address: Optional[str] = None
-    lead_time_days: Optional[int] = None
+    lead_time_days: Optional[int] = Field(default=None, alias='leadTimeDays')
+    
+    class Config:
+        allow_population_by_field_name = True
+        populate_by_name = True
 
 class Supplier(SupplierBase):
     id: str
-    created_at: datetime
-    updated_at: datetime
+    created_at: datetime = Field(alias='createdAt')
+    updated_at: datetime = Field(alias='updatedAt')
 
     class Config:
         from_attributes = True
+        allow_population_by_field_name = True
+        populate_by_name = True
 
 # Product Schemas
 class ProductBase(BaseModel):
@@ -86,42 +126,62 @@ class ProductBase(BaseModel):
     description: Optional[str] = None
     sku: Optional[str] = None
     barcode: Optional[str] = None
-    cost_price: float = 0.0
-    selling_price: float = 0.0
+    cost_price: float = Field(default=0.0, alias='costPrice')
+    selling_price: float = Field(default=0.0, alias='sellingPrice')
     material: Optional[str] = None
     color: Optional[str] = None
     season: Optional[str] = None
-    category_id: str
-    brand_id: Optional[str] = None
-    supplier_id: Optional[str] = None
+    category_id: str = Field(alias='categoryId')
+    brand_id: Optional[str] = Field(default=None, alias='brandId')
+    supplier_id: Optional[str] = Field(default=None, alias='supplierId')
+    
+    @validator('brand_id', 'supplier_id', pre=True)
+    def empty_str_to_none(cls, v):
+        return None if v == '' or v == 'undefined' else v
+        
+    @validator('category_id', pre=True)
+    def validate_category_id(cls, v):
+        if not v or v == '' or v == 'undefined':
+            raise ValueError('Category is required')
+        return v
+    
+    class Config:
+        allow_population_by_field_name = True
+        populate_by_name = True
 
 class ProductCreate(ProductBase):
-    pass
+    sizes: Optional[List[ProductSizeCreate]] = []
 
 class ProductUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     sku: Optional[str] = None
     barcode: Optional[str] = None
-    cost_price: Optional[float] = None
-    selling_price: Optional[float] = None
+    cost_price: Optional[float] = Field(default=None, alias='costPrice')
+    selling_price: Optional[float] = Field(default=None, alias='sellingPrice')
     material: Optional[str] = None
     color: Optional[str] = None
     season: Optional[str] = None
-    category_id: Optional[str] = None
-    brand_id: Optional[str] = None
-    supplier_id: Optional[str] = None
+    category_id: Optional[str] = Field(default=None, alias='categoryId')
+    brand_id: Optional[str] = Field(default=None, alias='brandId')
+    supplier_id: Optional[str] = Field(default=None, alias='supplierId')
+    
+    class Config:
+        allow_population_by_field_name = True
 
 class Product(ProductBase):
     id: str
-    created_at: datetime
-    updated_at: datetime
+    created_at: datetime = Field(alias='createdAt')
+    updated_at: datetime = Field(alias='updatedAt')
     category: Optional[Category] = None
     brand: Optional[Brand] = None
     supplier: Optional[Supplier] = None
+    sizes: Optional[List[ProductSize]] = []
 
     class Config:
         from_attributes = True
+        allow_population_by_field_name = True
+        populate_by_name = True
 
 # Stock Item Schemas
 class StockItemBase(BaseModel):

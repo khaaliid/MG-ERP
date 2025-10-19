@@ -24,13 +24,39 @@ async def get_async_database():
 
 async def create_schema_and_tables():
     """Create inventory schema and all tables"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     async with async_engine.begin() as conn:
         # Create schema
+        logger.info("[SCHEMA] Creating inventory schema...")
         await conn.execute(text("CREATE SCHEMA IF NOT EXISTS inventory;"))
         await conn.execute(text("GRANT ALL ON SCHEMA inventory TO mguser;"))
+        logger.info("[SUCCESS] Inventory schema created or already exists")
+        
+        # Create enum types first
+        logger.info("[ENUM] Creating sizetype enum...")
+        await conn.execute(text("""
+            DO $$ 
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM pg_type t 
+                    JOIN pg_namespace n ON t.typnamespace = n.oid 
+                    WHERE t.typname = 'sizetype' AND n.nspname = 'inventory'
+                ) THEN
+                    CREATE TYPE inventory.sizetype AS ENUM ('CLOTHING', 'NUMERIC', 'SHOE');
+                    RAISE NOTICE 'Created inventory.sizetype enum';
+                ELSE
+                    RAISE NOTICE 'inventory.sizetype enum already exists';
+                END IF;
+            END $$;
+        """))
+        logger.info("[SUCCESS] Sizetype enum processed")
         
         # Create tables
+        logger.info("[TABLES] Creating inventory tables...")
         await conn.run_sync(Base.metadata.create_all)
+        logger.info("[SUCCESS] Inventory tables created")
         
         # Grant permissions
         await conn.execute(text("GRANT ALL ON ALL TABLES IN SCHEMA inventory TO mguser;"))

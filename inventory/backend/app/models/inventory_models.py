@@ -11,9 +11,9 @@ Base = declarative_base()
 SCHEMA_NAME = "inventory"
 
 class SizeType(enum.Enum):
-    CLOTHING = "clothing"  # S, M, L, XL, XXL
-    NUMERIC = "numeric"    # 30, 32, 34, etc.
-    SHOE = "shoe"          # 7, 8, 9, 10, etc.
+    CLOTHING = "CLOTHING"  # S, M, L, XL, XXL
+    NUMERIC = "NUMERIC"    # 30, 32, 34, etc.
+    SHOE = "SHOE"          # 7, 8, 9, 10, etc.
 
 class Category(Base):
     __tablename__ = "categories"
@@ -95,6 +95,19 @@ class Product(Base):
     # Timestamps
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    
+    @property
+    def sizes(self):
+        """Convert stock_items to sizes format for API response"""
+        return [
+            {
+                "size": item.size,
+                "quantity": item.quantity,
+                "reorder_level": item.reorder_level,
+                "max_stock_level": item.max_stock_level
+            }
+            for item in self.stock_items
+        ]
 
 class StockItem(Base):
     __tablename__ = "stock_items"

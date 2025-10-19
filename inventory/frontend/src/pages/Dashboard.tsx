@@ -1,4 +1,32 @@
+import { useNavigate } from 'react-router-dom'
+
 const Dashboard = () => {
+  const navigate = useNavigate()
+
+  const handleAddProduct = () => {
+    navigate('/products?action=add')
+  }
+
+  const handleAddCategory = () => {
+    navigate('/categories?action=add')
+  }
+
+  const handleAddBrand = () => {
+    navigate('/brands?action=add')
+  }
+
+  const handleAddSupplier = () => {
+    navigate('/suppliers?action=add')
+  }
+
+  const handleCreatePurchaseOrder = () => {
+    navigate('/purchase-orders?action=create')
+  }
+
+  const handleViewReports = () => {
+    navigate('/stock-movements')
+  }
+
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow p-6">
@@ -61,7 +89,10 @@ const Dashboard = () => {
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <button className="p-4 border border-gray-300 rounded-lg hover:bg-gray-50 text-left">
+          <button 
+            onClick={handleAddProduct}
+            className="p-4 border border-gray-300 rounded-lg hover:bg-gray-50 text-left transition-colors"
+          >
             <div className="flex items-center">
               <span className="text-2xl mr-3">➕</span>
               <div>
@@ -71,7 +102,49 @@ const Dashboard = () => {
             </div>
           </button>
           
-          <button className="p-4 border border-gray-300 rounded-lg hover:bg-gray-50 text-left">
+          <button 
+            onClick={handleAddCategory}
+            className="p-4 border border-gray-300 rounded-lg hover:bg-gray-50 text-left transition-colors"
+          >
+            <div className="flex items-center">
+              <span className="text-2xl mr-3">🏷️</span>
+              <div>
+                <h3 className="font-medium">Add Category</h3>
+                <p className="text-sm text-gray-600">Create a new product category</p>
+              </div>
+            </div>
+          </button>
+          
+          <button 
+            onClick={handleAddBrand}
+            className="p-4 border border-gray-300 rounded-lg hover:bg-gray-50 text-left transition-colors"
+          >
+            <div className="flex items-center">
+              <span className="text-2xl mr-3">🏪</span>
+              <div>
+                <h3 className="font-medium">Add Brand</h3>
+                <p className="text-sm text-gray-600">Create a new product brand</p>
+              </div>
+            </div>
+          </button>
+          
+          <button 
+            onClick={handleAddSupplier}
+            className="p-4 border border-gray-300 rounded-lg hover:bg-gray-50 text-left transition-colors"
+          >
+            <div className="flex items-center">
+              <span className="text-2xl mr-3">🏢</span>
+              <div>
+                <h3 className="font-medium">Add Supplier</h3>
+                <p className="text-sm text-gray-600">Create a new supplier entry</p>
+              </div>
+            </div>
+          </button>
+          
+          <button 
+            onClick={handleCreatePurchaseOrder}
+            className="p-4 border border-gray-300 rounded-lg hover:bg-gray-50 text-left transition-colors"
+          >
             <div className="flex items-center">
               <span className="text-2xl mr-3">📋</span>
               <div>
@@ -81,7 +154,10 @@ const Dashboard = () => {
             </div>
           </button>
           
-          <button className="p-4 border border-gray-300 rounded-lg hover:bg-gray-50 text-left">
+          <button 
+            onClick={handleViewReports}
+            className="p-4 border border-gray-300 rounded-lg hover:bg-gray-50 text-left transition-colors"
+          >
             <div className="flex items-center">
               <span className="text-2xl mr-3">📊</span>
               <div>

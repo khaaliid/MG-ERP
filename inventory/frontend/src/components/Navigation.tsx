@@ -7,6 +7,7 @@ const Navigation = () => {
     { path: '/', label: 'Dashboard', icon: '📊' },
     { path: '/products', label: 'Products', icon: '📦' },
     { path: '/categories', label: 'Categories', icon: '🏷️' },
+    { path: '/brands', label: 'Brands', icon: '🏪' },
     { path: '/suppliers', label: 'Suppliers', icon: '🏢' },
     { path: '/purchase-orders', label: 'Purchase Orders', icon: '📋' },
     { path: '/stock-movements', label: 'Stock Movements', icon: '📈' },

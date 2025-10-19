@@ -1,9 +1,22 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from .routes.inventory_routes import router as inventory_router
 from .database import create_schema_and_tables
+from .init_data import create_sample_data
 import logging
+import time
+import traceback
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
+import json
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
@@ -12,14 +25,63 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS middleware
+# CORS middleware - must be added BEFORE other middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3002", "http://localhost:3000"],  # Frontend URLs
+    allow_origins=["http://localhost:3002", "http://localhost:3000", "http://127.0.0.1:3002", "http://127.0.0.1:3000"],  # Frontend URLs
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Custom logging middleware class
+class LoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        start_time = time.time()
+        
+        # Skip logging for CORS preflight requests
+        if request.method == "OPTIONS":
+            response = await call_next(request)
+            return response
+        
+        # Log incoming request (without body)
+        logger.info(f"📥 {request.method} {request.url.path} - Client: {request.client.host}")
+        
+        # Process request
+        try:
+            response = await call_next(request)
+            process_time = time.time() - start_time
+            
+            # Log response
+            status_emoji = "✅" if response.status_code < 400 else "❌"
+            logger.info(f"{status_emoji} {request.method} {request.url.path} - Status: {response.status_code} - Time: {process_time:.3f}s")
+            
+            return response
+        except Exception as e:
+            process_time = time.time() - start_time
+            logger.error(f"💥 {request.method} {request.url.path} - Error: {str(e)} - Time: {process_time:.3f}s")
+            raise
+
+# Add the logging middleware
+app.add_middleware(LoggingMiddleware)
+
+# Global exception handler
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    logger.error(f"🚨 HTTP Exception: {exc.status_code} - {exc.detail} - Path: {request.url.path}")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail, "path": str(request.url.path)}
+    )
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    logger.error(f"💥 Unhandled Exception: {str(exc)} - Path: {request.url.path}")
+    logger.error(f"📍 Full traceback: {traceback.format_exc()}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error", "path": str(request.url.path)}
+    )
 
 # Include routers
 app.include_router(inventory_router, prefix="/api/v1")
@@ -30,9 +92,11 @@ async def startup_event():
     try:
         await create_schema_and_tables()
         logger.info("[SUCCESS] Inventory schema and tables created successfully")
+        
     except Exception as e:
         logger.error(f"[ERROR] Failed to initialize inventory database: {str(e)}")
-        raise
+        # Don't raise here - let the server start anyway
+        logger.warning("[WARNING] Server starting with database issues - some features may not work")
 
 @app.get("/")
 async def root():

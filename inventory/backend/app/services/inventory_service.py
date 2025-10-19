@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, func
 from typing import List, Optional
 from ..models.inventory_models import (
@@ -15,6 +15,10 @@ from ..schemas.inventory_schemas import (
     StockMovementCreate
 )
 import httpx
+import logging
+from ..config import settings
+
+logger = logging.getLogger(__name__)
 
 class InventoryService:
     def __init__(self, db: Session):
@@ -115,19 +119,69 @@ class InventoryService:
 
     # Product Methods
     def create_product(self, product_data: ProductCreate) -> Product:
-        product = Product(**product_data.dict())
-        self.db.add(product)
-        self.db.commit()
-        self.db.refresh(product)
-        return product
+        logger.info(f"🏭 Service: Creating product '{product_data.name}'")
+        
+        try:
+            # Extract sizes data before creating product
+            sizes_data = product_data.sizes if hasattr(product_data, 'sizes') and product_data.sizes else []
+            logger.info(f"📏 Product has {len(sizes_data)} size variants")
+            
+            # Create product without sizes
+            product_dict = product_data.dict(exclude={'sizes'})
+            logger.debug(f"📦 Product dict: {product_dict}")
+            
+            product = Product(**product_dict)
+            self.db.add(product)
+            self.db.commit()
+            self.db.refresh(product)
+            logger.info(f"✅ Product created with ID: {product.id}")
+            
+            # Create stock items for each size
+            for i, size_data in enumerate(sizes_data):
+                logger.info(f"📏 Creating stock item {i+1}/{len(sizes_data)}: {size_data.size}")
+                stock_item = StockItem(
+                    product_id=product.id,
+                    size=size_data.size,
+                    quantity=size_data.quantity,
+                    reorder_level=size_data.reorder_level,
+                    max_stock_level=size_data.max_stock_level,
+                    location=getattr(size_data, 'location', None)
+                )
+                self.db.add(stock_item)
+            
+            if sizes_data:
+                self.db.commit()
+                self.db.refresh(product)
+                logger.info(f"✅ Created {len(sizes_data)} stock items for product {product.id}")
+            
+            return product
+            
+        except Exception as e:
+            logger.error(f"❌ Error creating product: {str(e)}")
+            self.db.rollback()
+            raise
 
     def get_products(self, category_id: Optional[str] = None, brand_id: Optional[str] = None) -> List[Product]:
-        query = self.db.query(Product)
+        query = self.db.query(Product).options(
+            joinedload(Product.category),
+            joinedload(Product.brand),
+            joinedload(Product.supplier),
+            joinedload(Product.stock_items)
+        )
+        
         if category_id:
             query = query.filter(Product.category_id == category_id)
         if brand_id:
             query = query.filter(Product.brand_id == brand_id)
-        return query.all()
+        
+        products = query.all()
+        
+        # Debug: Log the first product's prices if any products exist
+        if products:
+            first_product = products[0]
+            logger.info(f"Debug - First product: {first_product.name}, cost_price: {first_product.cost_price}, selling_price: {first_product.selling_price}")
+            
+        return products
 
     def get_product(self, product_id: str) -> Optional[Product]:
         return self.db.query(Product).filter(Product.id == product_id).first()
@@ -144,9 +198,18 @@ class InventoryService:
     def delete_product(self, product_id: str) -> bool:
         product = self.get_product(product_id)
         if product:
-            self.db.delete(product)
-            self.db.commit()
-            return True
+            try:
+                # First delete all related stock items
+                self.db.query(StockItem).filter(StockItem.product_id == product_id).delete()
+                
+                # Then delete the product
+                self.db.delete(product)
+                self.db.commit()
+                return True
+            except Exception as e:
+                self.db.rollback()
+                logger.error(f"Error deleting product {product_id}: {str(e)}")
+                raise
         return False
 
     # Stock Item Methods
