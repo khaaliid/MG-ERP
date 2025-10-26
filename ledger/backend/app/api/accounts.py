@@ -6,8 +6,7 @@ import logging
 from ..dependencies import get_db
 from ..schemas.schemas import AccountSchema
 from ..services.ledger import get_all_accounts, create_account
-from ..auth.dependencies import require_permission
-from ..auth.schemas import CurrentUser
+from ..external_auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -32,10 +31,10 @@ router = APIRouter(
            """)
 async def list_accounts(
     db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_permission("account:read"))
+    current_user: dict = Depends(get_current_user)
 ):
     """Get all accounts."""
-    logger.info(f"[LIST] Retrieving all accounts for user: {current_user.username}")
+    logger.info(f"[LIST] Retrieving all accounts for user: {current_user.get('username')}")
     try:
         accounts = await get_all_accounts(db)
         logger.info(f"[SUCCESS] Successfully retrieved {len(accounts)} accounts")
@@ -62,10 +61,10 @@ async def list_accounts(
 async def add_account(
     account: AccountSchema, 
     db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_permission("account:create"))
+    current_user: dict = Depends(get_current_user)
 ):
     """Create a new account."""
-    logger.info(f"[CREATE] Creating new account: {account.name} (Type: {account.type}, Code: {getattr(account, 'code', 'N/A')}) by user: {current_user.username}")
+    logger.info(f"[CREATE] Creating new account: {account.name} (Type: {account.type}, Code: {getattr(account, 'code', 'N/A')}) by user: {current_user.get('username')}")
     try:
         new_account = await create_account(db, account)
         logger.info(f"[SUCCESS] Successfully created account: ID={new_account.id}, Name='{new_account.name}'")

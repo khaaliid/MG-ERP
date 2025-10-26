@@ -1,14 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
+import httpx
 
 from .config import engine, create_session
 from .services.ledger import Base
 from .api.router import api_router
 from .logging_config import setup_logging
-# Import auth models to ensure they're registered with SQLAlchemy
-from .auth.models import User, Role, Permission, UserSession
-from .auth.service import AuthService
+
+# External Auth Service Configuration
+AUTH_SERVICE_URL = "http://localhost:8004/api/v1/auth"
 
 # Setup logging
 logger = setup_logging()
@@ -22,26 +23,18 @@ app = FastAPI(
     A professional-grade ERP system for managing accounts and financial transactions with enterprise-level security.
     
     ### [SECURITY] Authentication Required
-    Most endpoints require authentication. Use the login endpoint to obtain a JWT token.
+    Most endpoints require authentication. Use the external auth service to obtain a JWT token.
     
     ### [GOVERNANCE] Key Features
     * **Account Management** - Create, view, update, and manage chart of accounts
     * **Transaction Processing** - Record and track financial transactions with double-entry bookkeeping
-    * **User Management** - Role-based access control with granular permissions
-    * **JWT Authentication** - Secure token-based authentication system
-    * **Role-Based Authorization** - Admin, Manager, Accountant, and Viewer roles
+    * **External Authentication** - Integrated with centralized MG-ERP auth service
+    * **JWT Token Validation** - Secure token-based authentication via external service
     
     ### [STARTUP] Quick Start
-    1. **Login**: Use `/api/v1/auth/login` with default admin credentials (admin/admin123)
-    2. **Get Token**: Copy the access_token from the response
-    3. **Authorize**: Click the 🔒 Authorize button and paste your token
-    4. **Explore**: Try the account and transaction endpoints
-    
-    ### [ROLES] Default Roles
-    * **Admin**: Full system access including user management
-    * **Manager**: Business operations and reporting access
-    * **Accountant**: Financial data entry and reporting
-    * **Viewer**: Read-only access to accounts and transactions
+    1. **Get Token**: Use the MG-ERP auth service at http://localhost:8004/api/v1/auth/login
+    2. **Authorize**: Click the 🔒 Authorize button and paste your token
+    3. **Explore**: Try the account and transaction endpoints
     
     ---
     **Version**: 1.0.0 | **Environment**: Development | **Database**: PostgreSQL
@@ -61,16 +54,16 @@ app = FastAPI(
     redoc_url="/redoc",
     openapi_tags=[
         {
-            "name": "Authentication",
-            "description": "User authentication and authorization endpoints. **Start here** to get your access token.",
-        },
-        {
             "name": "accounts", 
             "description": "Chart of accounts management. Create and manage your account structure for double-entry bookkeeping."
         },
         {
             "name": "transactions",
             "description": "Financial transaction recording. Post journal entries with automatic balance validation."
+        },
+        {
+            "name": "financial-reports",
+            "description": "Financial reporting and analytics endpoints."
         },
         {
             "name": "health",
@@ -112,7 +105,17 @@ async def startup_event():
             await conn.execute(text("GRANT ALL ON ALL SEQUENCES IN SCHEMA ledger TO mguser;"))
             logger.info("[SUCCESS] Database tables ensured successfully in ledger schema")
         
-        logger.info("[INFO] Authentication system will be initialized on first request")
+        # Test auth service connection
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(f"{AUTH_SERVICE_URL.replace('/api/v1/auth', '')}/health")
+                if response.status_code == 200:
+                    logger.info("[SUCCESS] Auth service connection verified")
+                else:
+                    logger.warning(f"[WARNING] Auth service returned status {response.status_code}")
+        except Exception as auth_error:
+            logger.warning(f"[WARNING] Could not connect to auth service: {auth_error}")
+            logger.info("[INFO] Ledger will still start, but authentication may not work")
         
     except Exception as e:
         logger.error(f"[ERROR] Failed to initialize application: {str(e)}")
@@ -147,21 +150,26 @@ def detailed_health_check():
         "service": "MG-ERP Ledger API",
         "version": "1.0.0",
         "database": "PostgreSQL",
-        "authentication": "JWT Bearer Token",
+        "authentication": "External Auth Service (JWT Bearer Token)",
+        "auth_service": AUTH_SERVICE_URL,
         "documentation": {
             "swagger_ui": "/docs",
             "redoc": "/redoc",
             "openapi_schema": "/openapi.json"
         },
         "endpoints": {
-            "authentication": "/api/v1/auth",
+            "authentication": "Use external auth service at http://localhost:8004/api/v1/auth",
             "accounts": "/api/v1/accounts",
             "transactions": "/api/v1/transactions"
         },
-        "default_credentials": {
-            "username": "admin",
-            "password": "admin123",
-            "note": "[WARNING] Change in production!"
+        "auth_instructions": {
+            "login_url": "http://localhost:8004/api/v1/auth/login",
+            "default_credentials": {
+                "email": "admin@mg-erp.com",
+                "password": "admin123",
+                "note": "[WARNING] Change in production!"
+            },
+            "usage": "Get token from auth service, then use in Authorization header"
         }
     }
 

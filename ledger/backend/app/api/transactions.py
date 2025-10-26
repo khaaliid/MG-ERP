@@ -14,8 +14,7 @@ from ..services.ledger import (
     validate_all_transactions_integrity,
     get_accounting_equation_status,
 )
-from ..auth.dependencies import require_permission
-from ..auth.schemas import CurrentUser
+from ..external_auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -40,10 +39,10 @@ router = APIRouter(
            """)
 async def list_transactions(
     db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_permission("transaction:read"))
+    current_user: dict = Depends(get_current_user)
 ):
     """Get all transactions."""
-    logger.info(f"[DATABASE] Retrieving all transactions for user: {current_user.username}")
+    logger.info(f"[DATABASE] Retrieving all transactions for user: {current_user.get("username")}")
     try:
         transactions = await get_all_transactions(db)
         logger.info(f"[SUCCESS] Retrieved {len(transactions)} transactions from database")
@@ -99,10 +98,10 @@ async def list_transactions(
 async def add_transaction(
     transaction: TransactionSchema, 
     db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_permission("transaction:create"))
+    current_user: dict = Depends(get_current_user)
 ):
     """Create a new transaction."""
-    logger.info(f"[TRANSACTION] Creating new transaction: '{transaction.description}' with {len(transaction.lines)} lines by user: {current_user.username}")
+    logger.info(f"[TRANSACTION] Creating new transaction: '{transaction.description}' with {len(transaction.lines)} lines by user: {current_user.get("username")}")
     
     # Log transaction details
     total_debit = sum(line.amount for line in transaction.lines if line.type == 'debit')
@@ -151,10 +150,10 @@ async def add_transaction(
 async def get_transaction(
     transaction_id: int, 
     db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_permission("transaction:read"))
+    current_user: dict = Depends(get_current_user)
 ):
     """Get a specific transaction by ID."""
-    logger.info(f"[SEARCH] Retrieving transaction with ID={transaction_id} for user: {current_user.username}")
+    logger.info(f"[SEARCH] Retrieving transaction with ID={transaction_id} for user: {current_user.get("username")}")
     try:
         transaction = await get_transaction_by_id(db, transaction_id)
         if transaction:
@@ -216,10 +215,10 @@ async def get_transaction(
 async def validate_transaction(
     transaction: TransactionSchema,
     db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_permission("transaction:create"))
+    current_user: dict = Depends(get_current_user)
 ):
     """Validate transaction data without creating it."""
-    logger.info(f"[VALIDATION] Validating transaction: '{transaction.description}' for user: {current_user.username}")
+    logger.info(f"[VALIDATION] Validating transaction: '{transaction.description}' for user: {current_user.get("username")}")
     
     try:
         validation_result = await validate_transaction_data(db, transaction)
@@ -253,10 +252,10 @@ async def validate_transaction(
 async def validate_existing_transaction(
     transaction_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_permission("transaction:read"))
+    current_user: dict = Depends(get_current_user)
 ):
     """Validate integrity of an existing transaction."""
-    logger.info(f"[VALIDATION] Validating existing transaction ID={transaction_id} for user: {current_user.username}")
+    logger.info(f"[VALIDATION] Validating existing transaction ID={transaction_id} for user: {current_user.get("username")}")
     
     try:
         validation_result = await validate_transaction_integrity(db, transaction_id)
@@ -288,10 +287,10 @@ async def validate_existing_transaction(
            """)
 async def validate_all_transactions(
     db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_permission("system:audit"))
+    current_user: dict = Depends(get_current_user)
 ):
     """Validate integrity of all transactions in the system."""
-    logger.info(f"[VALIDATION] Starting system-wide validation for user: {current_user.username}")
+    logger.info(f"[VALIDATION] Starting system-wide validation for user: {current_user.get("username")}")
     
     try:
         validation_result = await validate_all_transactions_integrity(db)
@@ -323,10 +322,10 @@ async def validate_all_transactions(
            """)
 async def get_accounting_equation(
     db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_permission("financial:read"))
+    current_user: dict = Depends(get_current_user)
 ):
     """Get current accounting equation status."""
-    logger.info(f"[ACCOUNTING] Retrieving accounting equation status for user: {current_user.username}")
+    logger.info(f"[ACCOUNTING] Retrieving accounting equation status for user: {current_user.get("username")}")
     
     try:
         equation_status = await get_accounting_equation_status(db)

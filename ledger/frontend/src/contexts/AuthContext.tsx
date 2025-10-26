@@ -21,13 +21,6 @@ interface AuthContextType {
   isLoading: boolean;
 }
 
-interface LoginResponse {
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
-  user: User;
-}
-
 // Create context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -64,14 +57,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log('🔐 Starting login process for:', username);
       setIsLoading(true);
       
-      const formData = new FormData();
-      formData.append('username', username);
-      formData.append('password', password);
+      // Convert username to email if needed (for compatibility)
+      const email = username.includes('@') ? username : `${username}@mg-erp.com`;
+      
+      const loginData = {
+        email: email,
+        password: password
+      };
 
-      console.log('📡 Sending login request to backend...');
-      const response = await fetch('http://localhost:8000/api/v1/auth/login', {
+      console.log('📡 Sending login request to auth service...');
+      const response = await fetch('http://localhost:8004/api/v1/auth/login', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(loginData),
       });
 
       console.log('📬 Response status:', response.status, response.statusText);
@@ -82,19 +82,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw new Error('Login failed');
       }
 
-      const data: LoginResponse = await response.json();
+      const tokenData: { access_token: string; refresh_token: string; token_type: string } = await response.json();
       console.log('✅ Login response received:', {
-        hasToken: !!data.access_token,
-        hasUser: !!data.user,
-        user: data.user
+        hasToken: !!tokenData.access_token,
       });
+      
+      // Get user profile with the token
+      console.log('👤 Fetching user profile...');
+      const profileResponse = await fetch('http://localhost:8004/api/v1/auth/profile', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${tokenData.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!profileResponse.ok) {
+        console.error('❌ Failed to fetch user profile');
+        throw new Error('Failed to fetch user profile');
+      }
+
+      const userData: User = await profileResponse.json();
+      console.log('✅ User profile received:', userData);
       
       // Store auth data
       console.log('💾 Setting user state and localStorage...');
-      setToken(data.access_token);
-      setUser(data.user);
-      localStorage.setItem('auth_token', data.access_token);
-      localStorage.setItem('auth_user', JSON.stringify(data.user));
+      setToken(tokenData.access_token);
+      setUser(userData);
+      localStorage.setItem('auth_token', tokenData.access_token);
+      localStorage.setItem('auth_user', JSON.stringify(userData));
       
       console.log('🎉 Login successful! User state updated.');
       return true;
