@@ -1,10 +1,39 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from ..database import get_database
 from ..services.inventory_service import InventoryService
 import logging
 import traceback
+
+logger = logging.getLogger(__name__)
+
+def check_permission(request: Request, required_action: str):
+    """Check if current user has permission for the required action"""
+    user = getattr(request.state, 'current_user', None)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    user_role = user.get("role", "viewer")
+    
+    # Define inventory permissions by role
+    role_permissions = {
+        "admin": ["create", "read", "update", "delete", "manage"],
+        "manager": ["create", "read", "update", "delete"],
+        "employee": ["read", "update"],
+        "viewer": ["read"]
+    }
+    
+    user_permissions = role_permissions.get(user_role, [])
+    
+    if required_action not in user_permissions:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Insufficient permissions. Role '{user_role}' cannot '{required_action}' inventory resources."
+        )
+    
+    logger.info(f"Permission granted: {user_role} can {required_action} inventory")
+    return user
 
 logger = logging.getLogger(__name__)
 from ..schemas.inventory_schemas import (
@@ -23,18 +52,32 @@ router = APIRouter()
 
 # Category Routes
 @router.post("/categories/", response_model=Category)
-def create_category(category: CategoryCreate, db: Session = Depends(get_database)):
+def create_category(
+    category: CategoryCreate, 
+    request: Request,
+    db: Session = Depends(get_database)
+):
+    check_permission(request, "create")
     logger.info(f"category: {category}")
     service = InventoryService(db)
     return service.create_category(category)
 
 @router.get("/categories/", response_model=List[Category])
-def get_categories(db: Session = Depends(get_database)):
+def get_categories(
+    request: Request,
+    db: Session = Depends(get_database)
+):
+    check_permission(request, "read")
     service = InventoryService(db)
     return service.get_categories()
 
 @router.get("/categories/{category_id}", response_model=Category)
-def get_category(category_id: str, db: Session = Depends(get_database)):
+def get_category(
+    category_id: str, 
+    request: Request,
+    db: Session = Depends(get_database)
+):
+    check_permission(request, "read")
     service = InventoryService(db)
     category = service.get_category(category_id)
     if not category:
@@ -42,7 +85,13 @@ def get_category(category_id: str, db: Session = Depends(get_database)):
     return category
 
 @router.put("/categories/{category_id}", response_model=Category)
-def update_category(category_id: str, category: CategoryUpdate, db: Session = Depends(get_database)):
+def update_category(
+    category_id: str, 
+    category: CategoryUpdate, 
+    request: Request,
+    db: Session = Depends(get_database)
+):
+    check_permission(request, "update")
     service = InventoryService(db)
     updated_category = service.update_category(category_id, category)
     if not updated_category:

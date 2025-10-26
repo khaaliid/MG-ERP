@@ -65,6 +65,63 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 # Add the logging middleware
 app.add_middleware(LoggingMiddleware)
 
+# Authentication middleware
+class AuthMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # Skip auth for docs, health checks, and CORS preflight
+        public_paths = ["/docs", "/redoc", "/openapi.json", "/health"]
+        if any(request.url.path.startswith(path) for path in public_paths) or request.method == "OPTIONS":
+            return await call_next(request)
+        
+        # Check for Authorization header
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Authorization header required"}
+            )
+        
+        try:
+            # Validate token with auth service
+            import httpx
+            token = auth_header.split(" ")[1]
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    "http://localhost:8004/api/v1/auth/profile",
+                    headers={"Authorization": f"Bearer {token}"},
+                    timeout=5.0
+                )
+                
+                if response.status_code != 200:
+                    return JSONResponse(
+                        status_code=401,
+                        content={"detail": "Invalid or expired token"}
+                    )
+                
+                user = response.json()
+                if not user.get("is_active", False):
+                    return JSONResponse(
+                        status_code=401,
+                        content={"detail": "User account is inactive"}
+                    )
+                
+                # Add user info to request state
+                request.state.current_user = user
+                logger.info(f"🔐 Authenticated user: {user.get('email')} - Role: {user.get('role')}")
+        
+        except Exception as e:
+            logger.error(f"🚫 Authentication failed: {str(e)}")
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Authentication failed"}
+            )
+        
+        return await call_next(request)
+
+# Add the auth middleware
+app.add_middleware(AuthMiddleware)
+
 # Global exception handler
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):

@@ -1,103 +1,48 @@
-const API_BASE_URL = 'http://localhost:8002/api/v1'
+import { baseApiService } from "./baseApiService";
 
 export interface Category {
-  id: string
-  name: string
-  description?: string
-  sizeType: 'CLOTHING' | 'NUMERIC' | 'SHOE'
-  createdAt: string
-  updatedAt: string
+  id: string;
+  name: string;
+  description?: string;
+  size_type: "CLOTHING" | "NUMERIC" | "SHOE";
+  created_at?: string;
+  updated_at?: string;
 }
 
-export interface CreateCategoryRequest {
-  name: string
-  description?: string
-  sizeType: 'CLOTHING' | 'NUMERIC' | 'SHOE'
+export interface CategoryCreate {
+  name: string;
+  description?: string;
+  size_type: "CLOTHING" | "NUMERIC" | "SHOE";
 }
 
-export interface ApiResponse<T> {
-  data: T
-  message?: string
+export interface CategoryUpdate {
+  name?: string;
+  description?: string;
+  size_type?: "CLOTHING" | "NUMERIC" | "SHOE";
 }
 
 class CategoryService {
-  async getCategories(): Promise<ApiResponse<Category[]>> {
-    const response = await fetch(`${API_BASE_URL}/categories/`)
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch categories: ${response.statusText}`)
-    }
-    
-    const data = await response.json()
-    return { data }
+  private basePath = "/api/v1/categories";
+
+  async getCategories(): Promise<Category[]> {
+    return baseApiService.get<Category[]>(this.basePath);
   }
 
-  async getCategory(id: string): Promise<ApiResponse<Category>> {
-    const response = await fetch(`${API_BASE_URL}/categories/${id}`)
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch category: ${response.statusText}`)
-    }
-    
-    const data = await response.json()
-    return { data }
+  async getCategory(id: string): Promise<Category> {
+    return baseApiService.get<Category>(`${this.basePath}/${id}`);
   }
 
-  async createCategory(categoryData: CreateCategoryRequest): Promise<ApiResponse<Category>> {
-    const response = await fetch(`${API_BASE_URL}/categories/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        name: categoryData.name,
-        description: categoryData.description || '',
-        size_type: categoryData.sizeType  // Convert to snake_case for backend
-      })
-    })
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }))
-      throw new Error(errorData.detail || `Failed to create category: ${response.statusText}`)
-    }
-    
-    const data = await response.json()
-    return { data, message: 'Category created successfully!' }
+  async createCategory(category: CategoryCreate): Promise<Category> {
+    return baseApiService.post<Category>(this.basePath, category);
   }
 
-  async updateCategory(id: string, categoryData: Partial<CreateCategoryRequest>): Promise<ApiResponse<Category>> {
-    const response = await fetch(`${API_BASE_URL}/categories/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ...categoryData,
-        size_type: categoryData.sizeType  // Convert to snake_case for backend
-      })
-    })
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }))
-      throw new Error(errorData.detail || `Failed to update category: ${response.statusText}`)
-    }
-    
-    const data = await response.json()
-    return { data, message: 'Category updated successfully!' }
+  async updateCategory(id: string, category: CategoryUpdate): Promise<Category> {
+    return baseApiService.put<Category>(`${this.basePath}/${id}`, category);
   }
 
-  async deleteCategory(id: string): Promise<ApiResponse<void>> {
-    const response = await fetch(`${API_BASE_URL}/categories/${id}`, {
-      method: 'DELETE'
-    })
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }))
-      throw new Error(errorData.detail || `Failed to delete category: ${response.statusText}`)
-    }
-    
-    return { data: undefined, message: 'Category deleted successfully!' }
+  async deleteCategory(id: string): Promise<void> {
+    return baseApiService.delete(`${this.basePath}/${id}`);
   }
 }
 
-export const categoryService = new CategoryService()
+export const categoryService = new CategoryService();

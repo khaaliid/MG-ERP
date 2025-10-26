@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8002/api/v1'
+import { baseApiService } from "./baseApiService";
 
 export interface Product {
   id: string
@@ -63,33 +63,7 @@ export interface PaginatedResponse<T> {
 }
 
 class ProductService {
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
-    const url = `${API_BASE_URL}${endpoint}`
-    
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
-    })
-
-    if (!response.ok) {
-      let errorMessage = `HTTP error! status: ${response.status}`
-      try {
-        const errorData = await response.json()
-        errorMessage = errorData.detail || errorData.message || errorMessage
-      } catch {
-        // If we can't parse the error response, use the default message
-      }
-      throw new Error(errorMessage)
-    }
-
-    return response.json()
-  }
+  private basePath = "/products";
 
   async getProducts(params?: {
     page?: number
@@ -107,59 +81,48 @@ class ProductService {
     if (params?.brandId) searchParams.append('brand_id', params.brandId)
 
     const query = searchParams.toString()
-    const endpoint = `/products${query ? `?${query}` : ''}`
+    const endpoint = `${this.basePath}${query ? `?${query}` : ''}`
     
-    return this.request<PaginatedResponse<Product>>(endpoint)
+    return baseApiService.get<PaginatedResponse<Product>>(endpoint)
   }
 
   async getProduct(id: string): Promise<ApiResponse<Product>> {
-    return this.request<ApiResponse<Product>>(`/products/${id}`)
+    return baseApiService.get<ApiResponse<Product>>(`${this.basePath}/${id}`)
   }
 
   async createProduct(data: CreateProductRequest): Promise<ApiResponse<Product>> {
-    return this.request<ApiResponse<Product>>('/products', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    })
+    return baseApiService.post<ApiResponse<Product>>(this.basePath, data)
   }
 
   async updateProduct(id: string, data: Partial<CreateProductRequest>): Promise<ApiResponse<Product>> {
-    return this.request<ApiResponse<Product>>(`/products/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    })
+    return baseApiService.put<ApiResponse<Product>>(`${this.basePath}/${id}`, data)
   }
 
-  async deleteProduct(id: string): Promise<ApiResponse<void>> {
-    return this.request<ApiResponse<void>>(`/products/${id}`, {
-      method: 'DELETE',
-    })
+  async deleteProduct(id: string): Promise<void> {
+    return baseApiService.delete(`${this.basePath}/${id}`)
   }
 
   async getProductStock(productId: string): Promise<ApiResponse<StockItem[]>> {
-    return this.request<ApiResponse<StockItem[]>>(`/products/${productId}/stock`)
+    return baseApiService.get<ApiResponse<StockItem[]>>(`${this.basePath}/${productId}/stock`)
   }
 
   async updateStock(productId: string, size: string, quantity: number): Promise<ApiResponse<StockItem>> {
-    return this.request<ApiResponse<StockItem>>(`/products/${productId}/stock/${size}`, {
-      method: 'PUT',
-      body: JSON.stringify({ quantity }),
-    })
+    return baseApiService.put<ApiResponse<StockItem>>(`${this.basePath}/${productId}/stock/${size}`, { quantity })
   }
 
   // Categories
   async getCategories(): Promise<ApiResponse<Array<{ id: string; name: string }>>> {
-    return this.request<ApiResponse<Array<{ id: string; name: string }>>>('/categories')
+    return baseApiService.get<ApiResponse<Array<{ id: string; name: string }>>>('/categories')
   }
 
   // Brands
   async getBrands(): Promise<ApiResponse<Array<{ id: string; name: string }>>> {
-    return this.request<ApiResponse<Array<{ id: string; name: string }>>>('/brands')
+    return baseApiService.get<ApiResponse<Array<{ id: string; name: string }>>>('/brands')
   }
 
   // Suppliers
   async getSuppliers(): Promise<ApiResponse<Array<{ id: string; name: string }>>> {
-    return this.request<ApiResponse<Array<{ id: string; name: string }>>>('/suppliers')
+    return baseApiService.get<ApiResponse<Array<{ id: string; name: string }>>>('/suppliers')
   }
 }
 

@@ -47,10 +47,13 @@ class AuthSettings(BaseSettings):
     # CORS Settings
     CORS_ORIGINS: list = [
         "http://localhost:3000",  # Frontend dev
+        "http://localhost:3001",  # Ledger frontend  
+        "http://localhost:3002",  # Inventory frontend
+        "http://localhost:3003",  # POS frontend
         "http://localhost:5173",  # Vite dev
-        "http://localhost:8001",  # Inventory frontend
-        "http://localhost:8002",  # Ledger frontend  
-        "http://localhost:8003",  # POS frontend
+        "http://localhost:8001",  # Service port
+        "http://localhost:8002",  # Service port
+        "http://localhost:8003",  # Service port
     ]
     
     # Service URLs for cross-module authentication

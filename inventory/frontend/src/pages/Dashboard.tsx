@@ -1,7 +1,39 @@
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { productService, Product } from '../services/productService'
 
 const Dashboard = () => {
   const navigate = useNavigate()
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    loadDashboardData()
+  }, [])
+
+  const loadDashboardData = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await productService.getProducts()
+      setProducts(response.data || [])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load dashboard data')
+      console.error('Error loading dashboard data:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Calculate statistics from products data
+  const totalProducts = products.length
+  const inStockProducts = products.filter(product => {
+    // Assuming we need to check stock levels - this might need adjustment based on actual data structure
+    return true // For now, assume all products are in stock
+  }).length
+  const lowStockProducts = 0 // Would need stock data to calculate
+  const outOfStockProducts = 0 // Would need stock data to calculate
 
   const handleAddProduct = () => {
     navigate('/products?action=add')
@@ -34,6 +66,26 @@ const Dashboard = () => {
         <p className="text-gray-600">Welcome to the MG-ERP Inventory Management System</p>
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <span className="text-red-400 text-xl">⚠️</span>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">Error loading dashboard data</h3>
+              <p className="text-sm text-red-700 mt-1">{error}</p>
+              <button 
+                onClick={loadDashboardData}
+                className="mt-2 text-sm text-red-800 underline hover:text-red-900"
+              >
+                Try again
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
@@ -43,7 +95,9 @@ const Dashboard = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Products</p>
-              <p className="text-2xl font-semibold text-gray-900">-</p>
+              <p className="text-2xl font-semibold text-gray-900">
+                {loading ? "..." : totalProducts}
+              </p>
             </div>
           </div>
         </div>
@@ -55,7 +109,9 @@ const Dashboard = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">In Stock</p>
-              <p className="text-2xl font-semibold text-gray-900">-</p>
+              <p className="text-2xl font-semibold text-gray-900">
+                {loading ? "..." : inStockProducts}
+              </p>
             </div>
           </div>
         </div>
@@ -67,7 +123,9 @@ const Dashboard = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Low Stock</p>
-              <p className="text-2xl font-semibold text-gray-900">-</p>
+              <p className="text-2xl font-semibold text-gray-900">
+                {loading ? "..." : lowStockProducts}
+              </p>
             </div>
           </div>
         </div>
@@ -79,7 +137,9 @@ const Dashboard = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Out of Stock</p>
-              <p className="text-2xl font-semibold text-gray-900">-</p>
+              <p className="text-2xl font-semibold text-gray-900">
+                {loading ? "..." : outOfStockProducts}
+              </p>
             </div>
           </div>
         </div>
