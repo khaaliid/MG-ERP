@@ -9,7 +9,7 @@ try:
     from .service import AuthService
     from .schemas import (
         UserCreate, UserResponse, UserUpdate, UserLogin, TokenResponse,
-        RefreshTokenRequest, PasswordChange, RoleUpdate
+        RefreshTokenRequest, PasswordChange, RoleUpdate, LoginResponseWithUser
     )
     from .utils import JWTManager
     from .models import User
@@ -18,7 +18,7 @@ except ImportError:
     from service import AuthService
     from schemas import (
         UserCreate, UserResponse, UserUpdate, UserLogin, TokenResponse,
-        RefreshTokenRequest, PasswordChange, RoleUpdate
+        RefreshTokenRequest, PasswordChange, RoleUpdate, LoginResponseWithUser
     )
     from utils import JWTManager
     from models import User
@@ -121,7 +121,7 @@ async def signup(
             detail="Registration failed"
         )
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=LoginResponseWithUser)
 async def login(
     user_login: UserLogin,
     db: AsyncSession = Depends(get_db)
@@ -155,10 +155,20 @@ async def login(
         refresh_token = JWTManager.create_refresh_token(data={"user_id": user.id, "sub": user.id})
         
         logger.info(f"User logged in: {user.email}")
-        return TokenResponse(
+        return LoginResponseWithUser(
             access_token=access_token,
-            refresh_token=refresh_token,
-            token_type="bearer"
+            token_type="bearer",
+            user=UserResponse(
+                id=user.id,
+                username=user.username,
+                email=user.email,
+                full_name=user.full_name,
+                role=user.role,
+                is_active=user.is_active,
+                is_verified=user.is_verified,
+                created_at=user.created_at,
+                updated_at=user.updated_at
+            )
         )
     
     except HTTPException:

@@ -57,16 +57,18 @@ class Product(ProductBase):
 
 # Sale schemas
 class SaleItemBase(BaseModel):
-    product_id: int
+    # Accept UUIDs or numeric IDs from inventory system
+    product_id: str
     quantity: int = Field(..., gt=0)
     unit_price: float = Field(..., gt=0)
 
 class SaleItemCreate(SaleItemBase):
-    pass
+    size: Optional[str] = None
 
 class SaleItem(SaleItemBase):
     id: int
     line_total: float
+    size: Optional[str] = None
     product: Product
     
     class Config:
@@ -83,6 +85,8 @@ class SaleBase(BaseModel):
 
 class SaleCreate(SaleBase):
     items: List[SaleItemCreate] = Field(..., min_items=1)
+    tendered_amount: Optional[float] = Field(None, ge=0)
+    tax_rate: Optional[float] = Field(None, ge=0, le=1)
 
 class Sale(SaleBase):
     id: int

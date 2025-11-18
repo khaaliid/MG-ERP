@@ -60,7 +60,7 @@ class TransactionSchema(BaseModel):
     )
     description: str = Field(..., description="Transaction description", min_length=1)
     source: Optional[TransactionSource] = Field(
-        TransactionSource.MANUAL, 
+        TransactionSource.manual, 
         description="Transaction source: manual, import, or system"
     )
     reference: Optional[str] = Field(None, description="External reference number")

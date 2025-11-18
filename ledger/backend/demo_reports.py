@@ -39,7 +39,7 @@ class MockTransactionData:
         self.description = description
         self.lines = lines
         self.date = date or datetime.now(timezone.utc)
-        self.source = source or TransactionSource.MANUAL
+        self.source = source or TransactionSource.manual
         self.reference = reference
 
 

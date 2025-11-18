@@ -144,7 +144,7 @@ async def create_sample_data():
                 transaction = Transaction(
                     date=transaction_data['date'],
                     description=transaction_data['description'],
-                    source=TransactionSource.MANUAL
+                    source=TransactionSource.manual
                 )
                 db.add(transaction)
                 await db.flush()  # Get the ID

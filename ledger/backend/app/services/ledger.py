@@ -38,19 +38,18 @@ class Account(Base):
         return [line.transaction for line in self.lines]
 
 class TransactionSource(enum.Enum):
-    POS = "pos"
-    API = "api" 
-    IMPORT = "import"
-    MANUAL = "MANUAL"
-    WEB = "web"
-
+    pos = "pos"
+    api = "api" 
+    import_ = "import"
+    manual = "manual"
+    web = "web"
 class Transaction(Base):
     __tablename__ = "transactions"
     __table_args__ = {'schema': SCHEMA_NAME} 
     id = Column(Integer, primary_key=True, index=True)
     date = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
     description = Column(String, nullable=False)
-    source = Column(Enum(TransactionSource), nullable=False, default=TransactionSource.MANUAL)
+    source = Column(Enum(TransactionSource, schema=SCHEMA_NAME), nullable=False, default=TransactionSource.manual)
     reference = Column(String, nullable=True)  # invoice ID, POS ticket, etc.
     created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
     created_by = Column(String, nullable=True)  # user ID or username
@@ -240,7 +239,7 @@ async def create_transaction(db: AsyncSession, transaction_data):
         transaction = Transaction(
             date=transaction_date,
             description=transaction_data.description,
-            source=transaction_data.source if hasattr(transaction_data, 'source') else TransactionSource.MANUAL,
+            source=transaction_data.source if hasattr(transaction_data, 'source') else TransactionSource.manual,
             reference=getattr(transaction_data, 'reference', None),
             created_by=getattr(transaction_data, 'created_by', None),
         )

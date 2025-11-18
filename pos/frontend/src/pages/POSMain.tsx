@@ -93,44 +93,85 @@ const POSMain: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-lg">Loading products...</div>
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
+          <div className="text-lg font-semibold text-gray-600">Loading products...</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Products Section */}
-      <div className="lg:col-span-2">
-        <h2 className="text-2xl font-bold mb-4">Products</h2>
-        <ProductList 
-          products={products} 
-          onAddToCart={addToCart} 
-        />
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="bg-blue-100 p-3 rounded-lg">
+              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 8H4a1 1 0 01-1-1V5a1 1 0 011-1h1m0 0h1m0 0l.9 3M7 13v8a2 2 0 002 2h8a2 2 0 002-2v-8" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">Point of Sale</h1>
+              <p className="text-gray-600">Select products and manage sales transactions</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-4 text-sm text-gray-600">
+            <div className="bg-gray-50 px-3 py-2 rounded-lg">
+              <span className="font-semibold">{products.length}</span> Products Available
+            </div>
+            <div className="bg-blue-50 px-3 py-2 rounded-lg text-blue-700">
+              <span className="font-semibold">{cart.length}</span> Items in Cart
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Cart Section */}
-      <div className="lg:col-span-1">
-        <h2 className="text-2xl font-bold mb-4">Cart</h2>
-        <Cart
-          items={cart}
-          onUpdateQuantity={updateCartQuantity}
-          onRemoveItem={removeFromCart}
-          onCheckout={handleCheckout}
-          total={getTotalAmount()}
-        />
-        
-        {showCheckout && (
-          <div className="mt-6">
-            <CheckoutForm
-              cartItems={cart}
-              total={getTotalAmount()}
-              onSaleComplete={handleSaleComplete}
-              onCancel={() => setShowCheckout(false)}
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+        {/* Products Section */}
+        <div className="xl:col-span-3">
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="bg-indigo-100 p-2 rounded-lg">
+                <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-gray-800">Product Catalog</h2>
+            </div>
+            <ProductList 
+              products={products} 
+              onAddToCart={addToCart} 
             />
           </div>
-        )}
+        </div>
+
+        {/* Cart Section */}
+        <div className="xl:col-span-1">
+          <div className="sticky top-6">
+            <Cart
+              items={cart}
+              onUpdateQuantity={updateCartQuantity}
+              onRemoveItem={removeFromCart}
+              onCheckout={handleCheckout}
+              total={getTotalAmount()}
+            />
+            
+            {showCheckout && (
+              <div className="mt-6">
+                <CheckoutForm
+                  cartItems={cart}
+                  total={getTotalAmount()}
+                  onSaleComplete={handleSaleComplete}
+                  onCancel={() => setShowCheckout(false)}
+                />
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1,0 +1,669 @@
+/**
+ * Sales History Page Component
+ * Displays sales transactions with authentication and role-based access
+ */
+
+import React, { useState, useEffect } from 'react';
+import { apiService, Sale } from '../services/apiService';
+import { useAuth } from '../contexts/AuthContext';
+
+function formatEGP(v: number) {
+  return `${v.toFixed(2)} EGP`;
+}
+
+const SalesHistory: React.FC = () => {
+  const { user } = useAuth();
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [dateRange, setDateRange] = useState({
+    startDate: '',
+    endDate: ''
+  });
+
+  const loadSales = async (pageNum: number = 1) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await apiService.getSales(
+        pageNum, 
+        20, 
+        dateRange.startDate || undefined,
+        dateRange.endDate || undefined
+      );
+      
+      setSales(response.data);
+      setTotal(response.total);
+      setPage(pageNum);
+    } catch (err) {
+      console.error('Error loading sales:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load sales');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSales();
+  }, []);
+
+  const handleDateRangeChange = (field: 'startDate' | 'endDate', value: string) => {
+    setDateRange(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSearch = () => {
+    loadSales(1);
+  };
+
+  const handleVoidSale = async (saleId: string) => {
+    if (!user || (user.role !== 'manager' && user.role !== 'admin')) {
+      alert('Only managers and admins can void sales');
+      return;
+    }
+
+    const reason = prompt('Enter reason for voiding this sale:');
+    if (!reason) return;
+
+    try {
+      await apiService.voidSale(saleId, reason);
+      alert('Sale voided successfully');
+      loadSales(page); // Reload current page
+    } catch (err) {
+      console.error('Error voiding sale:', err);
+      alert(`Failed to void sale: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  };
+
+  const handleRefundSale = async (saleId: string, totalAmount: number) => {
+    if (!user || (user.role !== 'manager' && user.role !== 'admin')) {
+      alert('Only managers and admins can process refunds');
+      return;
+    }
+
+    const refundAmountStr = prompt(`Enter refund amount (max ${formatEGP(totalAmount)}):`);
+    if (!refundAmountStr) return;
+
+    const refundAmount = parseFloat(refundAmountStr);
+    if (isNaN(refundAmount) || refundAmount <= 0 || refundAmount > totalAmount) {
+      alert('Invalid refund amount');
+      return;
+    }
+
+    const reason = prompt('Enter reason for refund:');
+    if (!reason) return;
+
+    try {
+      await apiService.refundSale(saleId, refundAmount, reason);
+      alert('Refund processed successfully');
+      loadSales(page); // Reload current page
+    } catch (err) {
+      console.error('Error processing refund:', err);
+      alert(`Failed to process refund: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getPaymentMethodColor = (method: string) => {
+    switch (method.toLowerCase()) {
+      case 'cash':
+        return 'bg-green-100 text-green-800';
+      case 'card':
+        return 'bg-blue-100 text-blue-800';
+      case 'wallet':
+        return 'bg-purple-100 text-purple-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  if (loading && sales.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Sales History</h1>
+        <p className="text-gray-600">View and manage sales transactions</p>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+            <input
+              type="date"
+              value={dateRange.startDate}
+              onChange={(e) => handleDateRangeChange('startDate', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+            <input
+              type="date"
+              value={dateRange.endDate}
+              onChange={(e) => handleDateRangeChange('endDate', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex items-end">
+            <button
+              onClick={handleSearch}
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Search
+            </button>
+          </div>
+          <div className="flex items-end">
+            <button
+              onClick={() => {
+                setDateRange({ startDate: '', endDate: '' });
+                loadSales(1);
+              }}
+              className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">Error</h3>
+              <div className="mt-2 text-sm text-red-700">
+                <p>{error}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sales Table */}
+      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Sale Number
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Date & Time
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Items
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Payment Method
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Total
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Cashier
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {sales.map((sale) => (
+                <tr key={sale.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-blue-600 cursor-pointer hover:text-blue-800"
+                         onClick={() => setSelectedSale(sale)}>
+                      {sale.sale_number}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {formatDate(sale.created_at)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {sale.items.length} item{sale.items.length !== 1 ? 's' : ''}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPaymentMethodColor(sale.payment_method)}`}>
+                      {sale.payment_method.charAt(0).toUpperCase() + sale.payment_method.slice(1)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {formatEGP(sale.total_amount)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {sale.cashier || 'Unknown'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => setSelectedSale(sale)}
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        View
+                      </button>
+                      {(user?.role === 'manager' || user?.role === 'admin') && (
+                        <>
+                          <button
+                            onClick={() => handleVoidSale(sale.id)}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            Void
+                          </button>
+                          <button
+                            onClick={() => handleRefundSale(sale.id, sale.total_amount)}
+                            className="text-orange-600 hover:text-orange-800"
+                          >
+                            Refund
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {sales.length === 0 && !loading && (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                    No sales found for the selected criteria.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        {total > 20 && (
+          <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+            <div className="flex-1 flex justify-between sm:hidden">
+              <button
+                onClick={() => loadSales(page - 1)}
+                disabled={page <= 1}
+                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => loadSales(page + 1)}
+                disabled={page * 20 >= total}
+                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-gray-700">
+                  Showing <span className="font-medium">{(page - 1) * 20 + 1}</span> to{' '}
+                  <span className="font-medium">{Math.min(page * 20, total)}</span> of{' '}
+                  <span className="font-medium">{total}</span> results
+                </p>
+              </div>
+              <div>
+                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                  <button
+                    onClick={() => loadSales(page - 1)}
+                    disabled={page <= 1}
+                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => loadSales(page + 1)}
+                    disabled={page * 20 >= total}
+                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                </nav>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Sale Detail Modal */}
+      {selectedSale && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Sale Details - {selectedSale.sale_number}
+                </h3>
+                <button
+                  onClick={() => setSelectedSale(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Sale Information</h4>
+                  <div className="space-y-1 text-sm">
+                    <div><span className="text-gray-600">Date:</span> {formatDate(selectedSale.created_at)}</div>
+                    <div><span className="text-gray-600">Payment Method:</span> {selectedSale.payment_method}</div>
+                    <div><span className="text-gray-600">Cashier:</span> {selectedSale.cashier || 'Unknown'}</div>
+                    {selectedSale.customer_name && (
+                      <div><span className="text-gray-600">Customer:</span> {selectedSale.customer_name}</div>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Payment Details</h4>
+                  <div className="space-y-1 text-sm">
+                    <div><span className="text-gray-600">Subtotal:</span> {formatEGP(selectedSale.subtotal)}</div>
+                    <div><span className="text-gray-600">Discount:</span> {formatEGP(selectedSale.discount_amount)}</div>
+                    <div><span className="text-gray-600">Tax:</span> {formatEGP(selectedSale.tax_amount)}</div>
+                    <div className="font-medium"><span className="text-gray-600">Total:</span> {formatEGP(selectedSale.total_amount)}</div>
+                    {selectedSale.tendered_amount && (
+                      <>
+                        <div><span className="text-gray-600">Tendered:</span> {formatEGP(selectedSale.tendered_amount)}</div>
+                        <div><span className="text-gray-600">Change:</span> {formatEGP(selectedSale.change_amount || 0)}</div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-medium text-gray-900 mb-2">Items Sold</h4>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Qty</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {selectedSale.items.map((item, index) => (
+                        <tr key={index}>
+                          <td className="px-4 py-2 text-sm text-gray-900">{item.product_id}</td>
+                          <td className="px-4 py-2 text-sm text-gray-900">{item.quantity}</td>
+                          <td className="px-4 py-2 text-sm text-gray-900">{formatEGP(item.unit_price)}</td>
+                          <td className="px-4 py-2 text-sm text-gray-900">{formatEGP(item.quantity * item.unit_price)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {selectedSale.notes && (
+                <div className="mt-4">
+                  <h4 className="font-medium text-gray-900 mb-2">Notes</h4>
+                  <p className="text-sm text-gray-600">{selectedSale.notes}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end space-x-3 p-6 pt-0">
+              <button
+                onClick={() => setSelectedSale(null)}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default SalesHistory;
+
+const SalesHistory: React.FC = () => {
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+
+  useEffect(() => {
+    fetchSales();
+  }, []);
+
+  const fetchSales = async () => {
+    try {
+      const response = await fetch('http://localhost:8001/sales/');
+      if (response.ok) {
+        const data = await response.json();
+        setSales(data);
+      }
+    } catch (error) {
+      console.error('Error fetching sales:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString();
+  };
+
+  const getTodaysSales = () => {
+    const today = new Date().toDateString();
+    return sales.filter(sale => 
+      new Date(sale.created_at).toDateString() === today
+    );
+  };
+
+  const getTodaysTotal = () => {
+    return getTodaysSales().reduce((total, sale) => total + sale.total_amount, 0);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg">Loading sales history...</div>
+      </div>
+    );
+  }
+
+  const todaysSales = getTodaysSales();
+  const todaysTotal = getTodaysTotal();
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold mb-4">Sales History</h2>
+        
+        {/* Today's Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-blue-100 rounded-lg p-4">
+            <h3 className="font-semibold text-blue-800">Today's Sales</h3>
+            <p className="text-2xl font-bold text-blue-600">{todaysSales.length}</p>
+          </div>
+          <div className="bg-green-100 rounded-lg p-4">
+            <h3 className="font-semibold text-green-800">Today's Revenue</h3>
+            <p className="text-2xl font-bold text-green-600">${todaysTotal.toFixed(2)}</p>
+          </div>
+          <div className="bg-purple-100 rounded-lg p-4">
+            <h3 className="font-semibold text-purple-800">Total Sales</h3>
+            <p className="text-2xl font-bold text-purple-600">{sales.length}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Sale ID
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Date & Time
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Total Amount
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Payment Method
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Items
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {sales.map((sale) => (
+                <tr key={sale.id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    #{sale.id.slice(-8)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {formatDate(sale.created_at)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
+                    ${sale.total_amount.toFixed(2)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      sale.payment_method === 'cash' 
+                        ? 'bg-green-100 text-green-800'
+                        : sale.payment_method === 'card'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-purple-100 text-purple-800'
+                    }`}>
+                      {sale.payment_method.charAt(0).toUpperCase() + sale.payment_method.slice(1)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {sale.items?.length || 0} items
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button
+                      onClick={() => setSelectedSale(sale)}
+                      className="text-blue-600 hover:text-blue-900"
+                    >
+                      View Details
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        
+        {sales.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            No sales found.
+          </div>
+        )}
+      </div>
+
+      {/* Sale Details Modal */}
+      {selectedSale && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-96 overflow-y-auto m-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold">Sale Details</h3>
+              <button
+                onClick={() => setSelectedSale(null)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <p className="text-sm text-gray-600">Sale ID</p>
+                <p className="font-medium">#{selectedSale.id}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Date & Time</p>
+                <p className="font-medium">{formatDate(selectedSale.created_at)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Payment Method</p>
+                <p className="font-medium">{selectedSale.payment_method}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Amount Received</p>
+                <p className="font-medium">${selectedSale.amount_received.toFixed(2)}</p>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <h4 className="font-semibold mb-2">Items</h4>
+              <div className="space-y-2">
+                {selectedSale.items?.map((item) => (
+                  <div key={item.id} className="flex justify-between items-center bg-gray-50 p-2 rounded">
+                    <div>
+                      <p className="font-medium">{item.product_name}</p>
+                      <p className="text-sm text-gray-600">
+                        ${item.unit_price.toFixed(2)} × {item.quantity}
+                      </p>
+                    </div>
+                    <p className="font-medium">${item.total_price.toFixed(2)}</p>
+                  </div>
+                )) || (
+                  <p className="text-gray-500">No items found</p>
+                )}
+              </div>
+            </div>
+
+            <div className="border-t pt-4">
+              <div className="flex justify-between items-center">
+                <span className="text-lg font-semibold">Total:</span>
+                <span className="text-xl font-bold text-green-600">
+                  ${selectedSale.total_amount.toFixed(2)}
+                </span>
+              </div>
+              {selectedSale.payment_method === 'cash' && selectedSale.change_given > 0 && (
+                <div className="flex justify-between items-center mt-2">
+                  <span className="text-sm text-gray-600">Change Given:</span>
+                  <span className="text-sm font-medium">
+                    ${selectedSale.change_given.toFixed(2)}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default SalesHistory;

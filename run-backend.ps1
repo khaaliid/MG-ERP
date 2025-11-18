@@ -5,8 +5,9 @@ param(
 
 # Module configuration map with backend ports
 $ModuleConfig = @{
+    'auth'      = @{ Port = 8004; Description = 'Authentication & Authorization Service' }
     'inventory' = @{ Port = 8002; Description = 'Inventory Management System' }
-    'ledger'    = @{ Port = 8003; Description = 'Ledger & Accounting System' }
+    'ledger'    = @{ Port = 8000; Description = 'Ledger & Accounting System' }
     'pos'       = @{ Port = 8001; Description = 'Point of Sale System' }
 }
 
