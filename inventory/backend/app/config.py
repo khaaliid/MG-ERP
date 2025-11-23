@@ -12,6 +12,9 @@ class Settings:
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     
+    # Auth Service Integration
+    AUTH_SERVICE_URL: str = os.getenv("AUTH_SERVICE_URL", "http://localhost:8004")
+    
     # ERP Integration
     erp_api_url: str = os.getenv("ERP_API_URL", "http://localhost:8000")
 

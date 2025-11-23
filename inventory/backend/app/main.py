@@ -84,11 +84,13 @@ class AuthMiddleware(BaseHTTPMiddleware):
         try:
             # Validate token with auth service
             import httpx
+            from .config import settings
             token = auth_header.split(" ")[1]
             
+            auth_url = f"{settings.AUTH_SERVICE_URL}/api/v1/auth/profile"
             async with httpx.AsyncClient() as client:
                 response = await client.get(
-                    "http://localhost:8004/api/v1/auth/profile",
+                    auth_url,
                     headers={"Authorization": f"Bearer {token}"},
                     timeout=5.0
                 )

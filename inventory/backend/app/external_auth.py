@@ -4,10 +4,11 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional
 import logging
 import asyncio
+from .config import settings
 
 logger = logging.getLogger(__name__)
 
-AUTH_SERVICE_URL = "http://localhost:8004/api/v1/auth/profile"
+AUTH_SERVICE_URL = f"{settings.AUTH_SERVICE_URL}/api/v1/auth/profile"
 security = HTTPBearer()
 
 async def get_current_user(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:

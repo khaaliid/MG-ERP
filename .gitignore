@@ -39,3 +39,6 @@ db/*.sql
 # OS
 Thumbs.db
 ehthumbs.db
+
+# ignore with pattern
+**/**-ignore*
