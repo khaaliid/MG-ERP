@@ -39,6 +39,3 @@ db/*.sql
 # OS
 Thumbs.db
 ehthumbs.db
-
-# github
-.github/

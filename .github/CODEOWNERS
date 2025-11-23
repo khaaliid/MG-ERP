@@ -1,0 +1,31 @@
+# CODEOWNERS for MG-ERP Monorepo
+# These owners will be requested for review when someone opens a pull request.
+
+# Global fallback
+* @khaaliid
+
+# Auth Service
+/auth/ @khaaliid
+/.github/workflows/auth-service.yml @khaaliid
+
+# Ledger Service
+/ledger/ @khaaliid
+/.github/workflows/ledger-service.yml @khaaliid
+
+# Inventory Service
+/inventory/ @khaaliid
+/.github/workflows/inventory-service.yml @khaaliid
+
+# POS Service
+/pos/ @khaaliid
+/.github/workflows/pos-service.yml @khaaliid
+
+# Database & Infrastructure
+/db/ @khaaliid
+docker-compose.yml @khaaliid
+
+# CI/CD
+/.github/workflows/ @khaaliid
+
+# Documentation
+*.md @khaaliid

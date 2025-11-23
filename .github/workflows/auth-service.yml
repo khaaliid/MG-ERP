@@ -1,0 +1,198 @@
+name: Auth Service CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'auth/**'
+      - '.github/workflows/auth-service.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'auth/**'
+      - '.github/workflows/auth-service.yml'
+
+env:
+  SERVICE_NAME: auth
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/mg-auth
+
+jobs:
+  test:
+    name: Test Auth Service
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: mguser
+          POSTGRES_PASSWORD: mgpassword
+          POSTGRES_DB: mgerp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'auth/requirements.txt'
+      
+      - name: Install dependencies
+        working-directory: ./auth
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-cov httpx
+      
+      - name: Run tests
+        working-directory: ./auth
+        env:
+          AUTH_DATABASE_URL: postgresql+asyncpg://mguser:mgpassword@localhost:5432/mgerp_test
+          SECRET_KEY: test-secret-key-for-ci
+          DEBUG: "false"
+        run: |
+          # Create auth schema
+          PGPASSWORD=mgpassword psql -h localhost -U mguser -d mgerp_test -c "CREATE SCHEMA IF NOT EXISTS auth;"
+          
+          # Run tests with coverage
+          pytest -v --cov=. --cov-report=xml --cov-report=term
+      
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./auth/coverage.xml
+          flags: auth-service
+          name: auth-coverage
+        continue-on-error: true
+
+  lint:
+    name: Lint Auth Service
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install linting tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 black isort mypy
+      
+      - name: Run black (formatter check)
+        working-directory: ./auth
+        run: black --check --diff .
+        continue-on-error: true
+      
+      - name: Run isort (import sorting check)
+        working-directory: ./auth
+        run: isort --check-only --diff .
+        continue-on-error: true
+      
+      - name: Run flake8 (linting)
+        working-directory: ./auth
+        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        continue-on-error: true
+
+  build:
+    name: Build Auth Docker Image
+    runs-on: ubuntu-latest
+    needs: [test, lint]
+    if: github.event_name == 'push'
+    
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./auth
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            VCS_REF=${{ github.sha }}
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.ref == 'refs/heads/develop'
+    environment:
+      name: staging
+      url: https://staging-auth.mg-erp.com
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Deploy to staging
+        run: |
+          echo "🚀 Deploying auth service to staging environment"
+          # Add your deployment script here (e.g., kubectl, docker-compose, SSH)
+          # Example: ssh user@staging-server "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:develop && docker-compose up -d auth"
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: https://auth.mg-erp.com
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Deploy to production
+        run: |
+          echo "🚀 Deploying auth service to production environment"
+          # Add your production deployment script here
+          # Example: kubectl set image deployment/auth auth=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
