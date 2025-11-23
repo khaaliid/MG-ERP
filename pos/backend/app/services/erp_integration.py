@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 import sys
 import os
 
-from ..config import ERP_BASE_URL
+from ..config import LEDGER_SERVICE_URL
 
 # Import TransactionSource from ledger service and create alias
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../ledger/backend'))
@@ -38,7 +38,7 @@ class ERPIntegrationService:
     """
 
     def __init__(self, ledger_base_url: Optional[str] = None):
-        self.ledger_base_url = (ledger_base_url or ERP_BASE_URL).rstrip('/')
+        self.ledger_base_url = (ledger_base_url or LEDGER_SERVICE_URL).rstrip('/')
         self._client: Optional[httpx.AsyncClient] = None
 
     @property
@@ -84,7 +84,7 @@ class ERPIntegrationService:
         # Use ledger.TransactionSource enum for type safety
         payload = {
             "description": f"POS Sale {sale_number}",
-            "source": ledger.TransactionSource.pos.value,  # Uses enum value "pos"
+            "source": ledger.TransactionSource.POS.value,  # Uses enum value "pos"
             "reference": sale_number,
             "created_by": cashier,
             "lines": lines
@@ -97,8 +97,8 @@ class ERPIntegrationService:
         if auth_token:
             headers["Authorization"] = f"Bearer {auth_token}"
 
-        url = f"{self.ledger_base_url}/transactions"
-        logger.debug("LEDGER_POST_URL url=%s", url)
+        url = f"{self.ledger_base_url}/api/v1/transactions"
+        logger.info("LEDGER_POST_URL url=%s", url)
         try:
             response = await self.client.post(url, json=payload, headers=headers)
             logger.info("LEDGER_POST_STATUS sale_number=%s status=%s", sale_number, response.status_code)
@@ -112,8 +112,17 @@ class ERPIntegrationService:
             data = response.json()
             logger.info("LEDGER_POST_SUCCESS sale_number=%s ledger_id=%s", sale_number, data.get("id"))
             return data
+        except httpx.ConnectError as e:
+            logger.error("LEDGER_POST_CONNECTION_ERROR sale_number=%s url=%s error=%s", sale_number, url, str(e))
+            raise RuntimeError(f"Cannot connect to ledger service at {url}: {str(e)}")
+        except httpx.TimeoutException as e:
+            logger.error("LEDGER_POST_TIMEOUT sale_number=%s url=%s error=%s", sale_number, url, str(e))
+            raise RuntimeError(f"Ledger service timeout at {url}: {str(e)}")
+        except httpx.HTTPStatusError as e:
+            logger.error("LEDGER_POST_HTTP_ERROR sale_number=%s status=%s response=%s", sale_number, e.response.status_code, e.response.text)
+            raise RuntimeError(f"Ledger HTTP error {e.response.status_code}: {e.response.text}")
         except Exception as e:
-            logger.error("LEDGER_POST_EXCEPTION sale_number=%s error=%s", sale_number, str(e))
-            raise
+            logger.error("LEDGER_POST_EXCEPTION sale_number=%s error_type=%s error=%s", sale_number, type(e).__name__, str(e))
+            raise RuntimeError(f"Ledger service error: {str(e)}")
 
 erp_service = ERPIntegrationService()

@@ -1,16 +1,19 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { LoadingProvider, useLoading } from './contexts/LoadingContext';
+import { enhancedApiService } from './services/enhancedApiService';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './components/Login';
 import Header from './components/Header';
+import LoadingScreen from './components/LoadingScreen';
 import POS from './pages/POS';
 import SalesHistory from './pages/SalesHistory';
 import Reports from './pages/Reports';
 import './App.css';
 
-// Loading component
-const LoadingScreen: React.FC = () => (
+// Auth Loading component (different from global loading)
+const AuthLoadingScreen: React.FC = () => (
   <div className="flex items-center justify-center min-h-screen">
     <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
   </div>
@@ -27,84 +30,99 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 // Main app component with authentication
 const AppContent: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
+  const loadingContext = useLoading();
+
+  // Initialize enhanced API service with loading context
+  useEffect(() => {
+    enhancedApiService.setLoadingContext(loadingContext);
+  }, [loadingContext]);
 
   if (isLoading) {
-    return <LoadingScreen />;
+    return <AuthLoadingScreen />;
   }
 
   return (
-    <Routes>
-      {/* Login Route */}
-      <Route 
-        path="/login" 
-        element={
-          isAuthenticated ? <Navigate to="/" replace /> : <Login />
-        } 
-      />
+    <>
+      <Routes>
+        {/* Login Route */}
+        <Route 
+          path="/login" 
+          element={
+            isAuthenticated ? <Navigate to="/" replace /> : <Login />
+          } 
+        />
+        
+        {/* Protected Routes */}
+        <Route 
+          path="/" 
+          element={
+            isAuthenticated ? (
+              <MainLayout>
+                <ProtectedRoute>
+                  <POS />
+                </ProtectedRoute>
+              </MainLayout>
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          } 
+        />
+        <Route 
+          path="/history" 
+          element={
+            isAuthenticated ? (
+              <MainLayout>
+                <ProtectedRoute>
+                  <SalesHistory />
+                </ProtectedRoute>
+              </MainLayout>
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          } 
+        />
+        <Route 
+          path="/reports" 
+          element={
+            isAuthenticated ? (
+              <MainLayout>
+                <ProtectedRoute requiredRole="manager">
+                  <Reports />
+                </ProtectedRoute>
+              </MainLayout>
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          } 
+        />
+        
+        {/* Catch-all redirect */}
+        <Route 
+          path="*" 
+          element={
+            <Navigate to={isAuthenticated ? "/" : "/login"} replace />
+          } 
+        />
+      </Routes>
       
-      {/* Protected Routes */}
-      <Route 
-        path="/" 
-        element={
-          isAuthenticated ? (
-            <MainLayout>
-              <ProtectedRoute>
-                <POS />
-              </ProtectedRoute>
-            </MainLayout>
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        } 
+      {/* Global Loading Screen - You can add your own transparent GIF here */}
+      <LoadingScreen 
+        gifUrl={undefined} // Replace with your GIF URL: "/your-loading.gif"
       />
-      <Route 
-        path="/history" 
-        element={
-          isAuthenticated ? (
-            <MainLayout>
-              <ProtectedRoute>
-                <SalesHistory />
-              </ProtectedRoute>
-            </MainLayout>
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        } 
-      />
-      <Route 
-        path="/reports" 
-        element={
-          isAuthenticated ? (
-            <MainLayout>
-              <ProtectedRoute requiredRole="manager">
-                <Reports />
-              </ProtectedRoute>
-            </MainLayout>
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        } 
-      />
-      
-      {/* Catch-all redirect */}
-      <Route 
-        path="*" 
-        element={
-          <Navigate to={isAuthenticated ? "/" : "/login"} replace />
-        } 
-      />
-    </Routes>
+    </>
   );
 };
 
 // Root app component
 const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <Router>
-        <AppContent />
-      </Router>
-    </AuthProvider>
+    <LoadingProvider>
+      <AuthProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </AuthProvider>
+    </LoadingProvider>
   );
 };
 

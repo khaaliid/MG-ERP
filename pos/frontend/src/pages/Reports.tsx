@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { apiService } from '../services/apiService';
+import { enhancedApiService } from '../services/enhancedApiService';
 import { useAuth } from '../contexts/AuthContext';
 
 function formatEGP(v: number) {
@@ -32,7 +32,7 @@ const Reports: React.FC = () => {
       setError(null);
       
       // Fetch sales data for the date range
-      const response = await apiService.getSales(
+      const response = await enhancedApiService.getSales(
         1, 
         1000, // Get more records for reporting
         dateRange.startDate,

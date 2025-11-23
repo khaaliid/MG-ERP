@@ -10,13 +10,15 @@ import logging
 from typing import List, Optional, Dict, Any
 from fastapi import HTTPException
 
+from ..config import INVENTORY_SERVICE_URL
+
 logger = logging.getLogger(__name__)
 
 class InventoryIntegrationService:
     """Service to integrate POS with Inventory backend"""
     
-    def __init__(self, inventory_base_url: str = "http://localhost:8002"):
-        self.inventory_base_url = inventory_base_url.rstrip('/')
+    def __init__(self, inventory_base_url: Optional[str] = None):
+        self.inventory_base_url = (inventory_base_url or INVENTORY_SERVICE_URL).rstrip('/')
         self._client = None
     
     @property

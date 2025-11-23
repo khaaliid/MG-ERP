@@ -29,5 +29,6 @@ Write-Host "Starting Authentication Service on port 8004..." -ForegroundColor Gr
 Write-Host "Service will be available at: http://localhost:8004" -ForegroundColor Cyan
 Write-Host "API Documentation: http://localhost:8004/docs" -ForegroundColor Cyan
 Write-Host "Press Ctrl+C to stop the service" -ForegroundColor Yellow
+cd ..
 
-uvicorn main:app --reload --host 0.0.0.0 --port 8004
+uvicorn auth.main:app --reload --host 0.0.0.0 --port 8004

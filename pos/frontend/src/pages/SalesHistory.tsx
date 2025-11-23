@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { apiService, Sale } from '../services/apiService';
+import { enhancedApiService, Sale } from '../services/enhancedApiService';
 import { useAuth } from '../contexts/AuthContext';
 
 function formatEGP(v: number) {
@@ -30,7 +30,7 @@ const SalesHistory: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await apiService.getSales(page, 20, startDate, endDate);
+      const response = await enhancedApiService.getSales(page, 20, startDate, endDate);
       setSales(response.data);
       setTotal(response.total);
     } catch (err) {
@@ -51,7 +51,7 @@ const SalesHistory: React.FC = () => {
     }
 
     try {
-      await apiService.voidSale(saleId, reason);
+      await enhancedApiService.voidSale(saleId, reason);
       fetchSales(); // Refresh the list
       setSelectedSale(null);
       alert('Sale voided successfully');
@@ -67,7 +67,7 @@ const SalesHistory: React.FC = () => {
     }
 
     try {
-      await apiService.refundSale(saleId, refundAmount, reason);
+      await enhancedApiService.refundSale(saleId, refundAmount, reason);
       fetchSales(); // Refresh the list
       setSelectedSale(null);
       alert('Refund processed successfully');

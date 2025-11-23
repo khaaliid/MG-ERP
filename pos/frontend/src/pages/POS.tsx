@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from 'react-router-dom';
-import { apiService, Product, Category } from "../services/apiService";
+import { enhancedApiService, Product, Category } from "../services/enhancedApiService";
 import { useAuth } from "../contexts/AuthContext";
 
 function formatEGP(v: number) {
@@ -142,13 +142,13 @@ export default function POS() {
         setError(null);
         
         // Check backend health
-        await apiService.healthCheck();
+        await enhancedApiService.checkHealth();
         setOnline(true);
         
         // Load products and categories in parallel
         const [productsResponse, categoriesData] = await Promise.all([
-          apiService.getProducts(1, 100),
-          apiService.getCategories()
+          enhancedApiService.getProducts(1, 100),
+          enhancedApiService.getCategories()
         ]);
         
         // Validate products data
@@ -221,7 +221,7 @@ export default function POS() {
     
     try {
       // Search products using the API
-      const searchResults = await apiService.searchProducts(text, 10);
+      const searchResults = await enhancedApiService.searchProducts(text);
       
       if (searchResults.length > 0) {
         // Add the first matching product
@@ -294,7 +294,7 @@ export default function POS() {
         notes: ""
       };
       
-      const sale = await apiService.createSale(saleData);
+      const sale = await enhancedApiService.createSale(saleData);
       
       alert(`Payment success!\nSale #: ${sale.sale_number}\nMethod: ${paymentMethod}\nTotal: ${formatEGP(total)}`);
       

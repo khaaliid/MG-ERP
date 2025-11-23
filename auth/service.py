@@ -32,6 +32,9 @@ class AuthService:
         
         if existing_user:
             raise ValueError("Email already exists")
+        # Enforce bcrypt max password length (72 bytes) to prevent runtime errors
+        if len(user_data.password.encode('utf-8')) > 72:
+            raise ValueError("Password too long (max 72 characters)")
         
         # Hash password
         hashed_password = AuthUtils.get_password_hash(user_data.password)
@@ -211,11 +214,18 @@ class AuthService:
         """Authenticate user with email and password"""
         user = await self.get_user_by_email(email)
         if not user:
+            logger.debug(f"auth.authenticate_user user_not_found email={email}")
+            return None
+        # Quick length check before verify to avoid passlib size errors
+        if len(password.encode('utf-8')) > 72:
+            logger.debug(f"auth.authenticate_user password_too_long email={email} length={len(password)}")
             return None
         
         if not AuthUtils.verify_password(password, user.hashed_password):
+            logger.debug(f"auth.authenticate_user invalid_password email={email}")
             return None
         
+        logger.debug(f"auth.authenticate_user success email={email} user_id={user.id}")
         return user
     
     async def change_password(self, user_id: str, current_password: str, new_password: str) -> bool:

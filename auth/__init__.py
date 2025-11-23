@@ -1,6 +1,6 @@
 # Authentication Service Initialization
 from .config import settings
-from .database import init_database
+from .database import init_database_async as init_database
 from .models import User, RefreshToken, UserSession, AuditLog
 from .schemas import (
     LoginRequest, LoginResponse, UserCreate, UserResponse, 

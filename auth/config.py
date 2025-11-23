@@ -70,3 +70,6 @@ def get_auth_settings() -> AuthSettings:
 
 # Export settings instance
 auth_settings = get_auth_settings()
+
+# Backward-compatible alias expected by older imports (`from auth.config import settings`)
+settings = auth_settings

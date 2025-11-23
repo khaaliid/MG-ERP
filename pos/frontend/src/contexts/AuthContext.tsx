@@ -4,7 +4,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { apiService, LoginRequest, User } from '../services/apiService';
+import { enhancedApiService, LoginRequest, User } from '../services/enhancedApiService';
 
 interface AuthContextType {
   user: User | null;
@@ -38,19 +38,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       
       // Check if we have a token
-      if (!apiService.isAuthenticated()) {
+      if (!enhancedApiService.isAuthenticated()) {
         setUser(null);
         return;
       }
 
       // Try to get user from localStorage first (faster)
-      const storedUser = apiService.getCurrentUserFromStorage();
+      const storedUser = enhancedApiService.getCurrentUserFromStorage();
       if (storedUser) {
         setUser(storedUser);
       }
 
       // Verify token is still valid by fetching current user
-      const currentUser = await apiService.getCurrentUser();
+      const currentUser = await enhancedApiService.getCurrentUser();
       if (currentUser) {
         setUser(currentUser);
         // Update localStorage with fresh user data
@@ -70,10 +70,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       console.log('AuthContext: Starting login process...');
-      const loginResponse = await apiService.login(credentials);
+      const loginResponse = await enhancedApiService.login(credentials);
       console.log('AuthContext: Login response received:', loginResponse);
-      // Ensure the API service has the latest token
-      apiService.reloadToken();
       setUser(loginResponse.user);
       console.log('AuthContext: User set successfully:', loginResponse.user);
     } catch (error) {
@@ -86,7 +84,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
-    apiService.logout();
+    enhancedApiService.logout();
     setUser(null);
   };
 
@@ -96,7 +94,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const value: AuthContextType = {
     user,
-    isAuthenticated: !!user && apiService.isAuthenticated(),
+    isAuthenticated: !!user && enhancedApiService.isAuthenticated(),
     isLoading,
     login,
     logout,

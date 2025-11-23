@@ -1,110 +1,129 @@
+"""
+Stateless POS Schemas
+
+These schemas represent the data formats for the stateless POS system.
+They match the external service response formats and request structures.
+"""
+
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Dict, Any, Union
 from datetime import datetime
-from decimal import Decimal
 
-# Product schemas
-class ProductCategoryBase(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100)
+# External service response schemas (read-only)
+class ExternalProduct(BaseModel):
+    """Product schema from Inventory Service (read-only)"""
+    id: Union[str, int]
+    name: str
+    sku: str
+    barcode: Optional[str] = None
     description: Optional[str] = None
-    is_active: bool = True
+    price: float
+    cost: Optional[float] = None
+    stock_quantity: int
+    min_stock_level: int
+    category_id: Optional[Union[str, int]] = None
+    category_name: Optional[str] = None
+    is_active: bool
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
-class ProductCategoryCreate(ProductCategoryBase):
-    pass
-
-class ProductCategory(ProductCategoryBase):
-    id: int
-    created_at: datetime
-    
-    class Config:
-        from_attributes = True
-
-class ProductBase(BaseModel):
-    name: str = Field(..., min_length=1, max_length=200)
-    sku: str = Field(..., min_length=1, max_length=50)
-    barcode: Optional[str] = Field(None, max_length=100)
+class ExternalCategory(BaseModel):
+    """Category schema from Inventory Service (read-only)"""
+    id: Union[str, int]
+    name: str
     description: Optional[str] = None
-    price: float = Field(..., gt=0)
-    cost: Optional[float] = Field(None, ge=0)
-    stock_quantity: int = Field(default=0, ge=0)
-    min_stock_level: int = Field(default=0, ge=0)
-    category_id: Optional[int] = None
-    is_active: bool = True
+    is_active: bool
+    created_at: Optional[datetime] = None
 
-class ProductCreate(ProductBase):
-    pass
-
-class ProductUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=200)
-    sku: Optional[str] = Field(None, min_length=1, max_length=50)
-    barcode: Optional[str] = Field(None, max_length=100)
+class ExternalBrand(BaseModel):
+    """Brand schema from Inventory Service (read-only)"""
+    id: Union[str, int]
+    name: str
     description: Optional[str] = None
-    price: Optional[float] = Field(None, gt=0)
-    cost: Optional[float] = Field(None, ge=0)
-    stock_quantity: Optional[int] = Field(None, ge=0)
-    min_stock_level: Optional[int] = Field(None, ge=0)
-    category_id: Optional[int] = None
-    is_active: Optional[bool] = None
+    is_active: bool
+    created_at: Optional[datetime] = None
 
-class Product(ProductBase):
-    id: int
-    created_at: datetime
-    updated_at: datetime
-    category: Optional[ProductCategory] = None
-    
-    class Config:
-        from_attributes = True
+# POS-specific input schemas for sale processing
+class SaleItemInput(BaseModel):
+    """Sale item input for creating a sale"""
+    product_id: Union[str, int] = Field(..., description="Product ID from inventory service")
+    quantity: int = Field(..., gt=0, description="Quantity to sell")
+    unit_price: float = Field(..., gt=0, description="Unit price at time of sale")
+    size: Optional[str] = Field(None, description="Product size/variant")
 
-# Sale schemas
-class SaleItemBase(BaseModel):
-    # Accept UUIDs or numeric IDs from inventory system
-    product_id: str
-    quantity: int = Field(..., gt=0)
-    unit_price: float = Field(..., gt=0)
+class SaleInput(BaseModel):
+    """Sale input for processing a transaction"""
+    items: List[SaleItemInput] = Field(..., min_items=1, description="Items being sold")
+    payment_method: str = Field(default="cash", description="Payment method (cash, card, etc.)")
+    customer_name: Optional[str] = Field(None, max_length=200, description="Optional customer name")
+    customer_phone: Optional[str] = Field(None, max_length=20, description="Optional customer phone")
+    customer_email: Optional[str] = Field(None, max_length=100, description="Optional customer email")
+    discount_amount: float = Field(default=0.0, ge=0, description="Discount amount")
+    tax_rate: float = Field(default=0.14, ge=0, le=1, description="Tax rate (0.14 = 14%)")
+    tendered_amount: Optional[float] = Field(None, ge=0, description="Amount tendered by customer")
+    notes: Optional[str] = Field(None, description="Optional sale notes")
 
-class SaleItemCreate(SaleItemBase):
-    size: Optional[str] = None
-
-class SaleItem(SaleItemBase):
-    id: int
+# Sale output schemas (what POS returns after processing)
+class ProcessedSaleItem(BaseModel):
+    """Processed sale item response"""
+    product_id: Union[str, int]
+    product_name: str
+    quantity: int
+    unit_price: float
     line_total: float
     size: Optional[str] = None
-    product: Product
-    
-    class Config:
-        from_attributes = True
 
-class SaleBase(BaseModel):
-    customer_name: Optional[str] = Field(None, max_length=200)
-    customer_phone: Optional[str] = Field(None, max_length=20)
-    customer_email: Optional[str] = Field(None, max_length=100)
-    payment_method: str = Field(default="cash", max_length=50)
-    notes: Optional[str] = None
-    cashier_name: Optional[str] = Field(None, max_length=100)
-    discount_amount: float = Field(default=0.0, ge=0)
-
-class SaleCreate(SaleBase):
-    items: List[SaleItemCreate] = Field(..., min_items=1)
-    tendered_amount: Optional[float] = Field(None, ge=0)
-    tax_rate: Optional[float] = Field(None, ge=0, le=1)
-
-class Sale(SaleBase):
-    id: int
+class ProcessedSale(BaseModel):
+    """Processed sale response from stateless POS service"""
+    id: str  # Temporary ID for response
     sale_number: str
+    items: List[ProcessedSaleItem]
     subtotal: float
     tax_amount: float
+    discount_amount: float
     total_amount: float
-    sale_date: datetime
-    created_at: datetime
-    is_synced_to_erp: bool
-    erp_transaction_id: Optional[int]
-    items: List[SaleItem]
-    
-    class Config:
-        from_attributes = True
+    payment_method: str
+    tendered_amount: Optional[float] = None
+    change_amount: float
+    customer_name: Optional[str] = None
+    notes: Optional[str] = None
+    cashier: str
+    cashier_id: Union[str, int]
+    created_at: str  # ISO format
+    ledger_entry_id: Optional[Union[str, int]] = None
+    inventory_updates: List[Dict[str, Any]]
+    status: str
 
-# Response schemas
-class SaleResponse(BaseModel):
+# Generic response schemas
+class PaginatedResponse(BaseModel):
+    """Generic paginated response format"""
+    data: List[Dict[str, Any]]
+    total: int
+    page: int
+    limit: int
+    has_next: bool = False
+    has_prev: bool = False
+
+class ServiceResponse(BaseModel):
+    """Generic service response format"""
     success: bool
     message: str
-    sale: Optional[Sale] = None
+    data: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+
+class HealthResponse(BaseModel):
+    """Health check response"""
+    status: str
+    message: str
+    version: str
+    service: str
+    architecture: Optional[Dict[str, Any]] = None
+    external_services: Optional[Dict[str, Any]] = None
+
+# Legacy schema aliases for backward compatibility
+# (These can be removed once frontend is updated)
+Product = ExternalProduct
+ProductCategory = ExternalCategory
+Sale = ProcessedSale
+SaleCreate = SaleInput
+SaleItem = ProcessedSaleItem

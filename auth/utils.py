@@ -1,4 +1,6 @@
 from passlib.context import CryptContext
+from passlib.exc import PasswordSizeError
+import logging
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
@@ -12,17 +14,36 @@ except ImportError:
     from schemas import TokenData
 
 # Password hashing context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(
+    schemes=["bcrypt", "pbkdf2_sha256"],  # include legacy/fallback scheme if existing hashes weren't bcrypt
+    deprecated="auto"
+)
 
 class AuthUtils:
     @staticmethod
     def verify_password(plain_password: str, hashed_password: str) -> bool:
         """Verify a plain password against its hash"""
-        return pwd_context.verify(plain_password, hashed_password)
+        try:
+            result = pwd_context.verify(plain_password, hashed_password)
+            return result
+        except PasswordSizeError:
+            return False
+        except ValueError:
+            return False
+        finally:
+            # Optional diagnostic logging when DEBUG enabled
+            from .config import auth_settings  # local import to avoid circular issues
+            if auth_settings.DEBUG:
+                logger = logging.getLogger(__name__)
+                prefix = hashed_password.split('$')[1] if '$' in hashed_password else 'unknown'
+                logger.debug(f"auth.password.verify debug prefix={prefix} length={len(plain_password)} valid={result if 'result' in locals() else False}")
     
     @staticmethod
     def get_password_hash(password: str) -> str:
         """Hash a password"""
+        if len(password.encode('utf-8')) > 72:
+            # Explicitly guard before bcrypt truncation
+            raise ValueError("Password too long (max 72 characters for bcrypt)")
         return pwd_context.hash(password)
     
     @staticmethod
