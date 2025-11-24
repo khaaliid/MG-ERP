@@ -34,10 +34,20 @@ from sqlalchemy.orm import sessionmaker
 is_postgres = TEST_DATABASE_URL.startswith("postgresql")
 
 # Create test engine and override config
+# For PostgreSQL, use NullPool to avoid connection pool issues in tests
+# For SQLite, use default pooling
+engine_kwargs = {
+    "echo": False,
+    "future": True,
+}
+
+if is_postgres:
+    from sqlalchemy.pool import NullPool
+    engine_kwargs["poolclass"] = NullPool
+
 test_engine = create_async_engine(
     TEST_DATABASE_URL,
-    echo=False,
-    future=True
+    **engine_kwargs
 )
 
 # Override the config engine
@@ -47,7 +57,9 @@ config.engine = test_engine
 TestAsyncSession = sessionmaker(
     test_engine, 
     class_=AsyncSession, 
-    expire_on_commit=False
+    expire_on_commit=False,
+    autoflush=False,
+    autocommit=False
 )
 
 # Override config SessionLocal
@@ -71,17 +83,6 @@ if not is_postgres:
     for table in Base.metadata.tables.values():
         if hasattr(table, 'schema'):
             table.schema = None
-
-# Override the get_db dependency immediately
-async def override_get_db():
-    async with TestAsyncSession() as session:
-        try:
-            yield session
-        finally:
-            await session.close()
-
-# Override before importing the app
-app.dependency_overrides[get_db] = override_get_db
 
 # Create tables immediately when module loads
 async def setup_test_database():
@@ -110,6 +111,31 @@ def run_async_setup():
 
 # Execute database setup
 run_async_setup()
+
+
+@pytest_asyncio.fixture
+async def db_session():
+    """Create a new database session for each test."""
+    async with TestAsyncSession() as session:
+        yield session
+        await session.rollback()  # Rollback any uncommitted changes
+        await session.close()
+
+
+# Override the get_db dependency to use per-test session
+async def override_get_db():
+    """Override database dependency with test session."""
+    async with TestAsyncSession() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+app.dependency_overrides[get_db] = override_get_db
 
 # Now create the test client after everything is set up
 client = TestClient(app)
