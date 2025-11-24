@@ -46,9 +46,9 @@ class MockTransactionLine:
         self.amount = amount
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="function")
 async def setup_comprehensive_accounts(db_session: AsyncSession):
-    """Setup comprehensive chart of accounts for testing"""
+    """Setup comprehensive chart of accounts for testing (per-test scope for isolation)"""
     
     accounts = [
         # Assets
@@ -88,9 +88,9 @@ async def setup_comprehensive_accounts(db_session: AsyncSession):
     return created_accounts
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="function")
 async def setup_sample_transactions(db_session: AsyncSession, setup_comprehensive_accounts):
-    """Create sample transactions for testing reports"""
+    """Create sample transactions for testing reports (per-test scope for isolation)"""
     
     base_date = datetime(2024, 1, 1, tzinfo=timezone.utc)
     
@@ -309,10 +309,12 @@ class TestFinancialReports:
     async def test_general_ledger_specific_account(self, db_session: AsyncSession, setup_sample_transactions):
         """Test general ledger for specific account"""
         
-        # Get cash account (should have ID 1 based on our setup)
-        cash_account_id = 1
+        # Get cash account by name
+        from app.services.ledger import get_account_by_name
+        cash_account = await get_account_by_name(db_session, "Cash")
+        assert cash_account is not None, "Cash account should exist from setup"
         
-        report = await generate_general_ledger(db_session, account_id=cash_account_id)
+        report = await generate_general_ledger(db_session, account_id=cash_account.id)
         
         # Should only have one account (Cash)
         assert len(report['accounts']) == 1

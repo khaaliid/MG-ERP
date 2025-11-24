@@ -235,8 +235,9 @@ def auto_authenticated(request, mock_current_user):
     
     Tests can opt-out by using the marker: @pytest.mark.unauthenticated
     """
-    # Check if test is marked as unauthenticated
-    if 'unauthenticated' in request.keywords or 'Unauthenticated' in request.node.name:
+    # Check if test is marked as unauthenticated or has "unauthenticated" in name
+    test_name = request.node.name.lower()
+    if 'unauthenticated' in request.keywords or 'unauthenticated' in test_name or 'unauthorized' in test_name:
         # Don't mock auth for unauthenticated tests
         yield
         return

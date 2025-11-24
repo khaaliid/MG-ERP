@@ -92,23 +92,23 @@ class TestConcurrency:
     def test_concurrent_account_creation(self, auth_headers):
         """Test creating accounts with similar data concurrently."""
         # This is a basic test - true concurrency testing would require threading
-        account_base = {
-            "name": "Concurrent Test Account",
-            "type": "asset",
-            "description": "Testing concurrent creation"
-        }
         
-        # Try to create accounts with different codes rapidly
+        # Try to create accounts with different names and codes rapidly
         results = []
         for i in range(5):
-            account_data = account_base.copy()
-            account_data["code"] = f"CONC-{i}"
+            account_data = {
+                "name": f"Concurrent Test Account {i}",
+                "type": "asset",
+                "code": f"CONC-{i}",
+                "description": "Testing concurrent creation"
+            }
             response = client.post("/api/v1/accounts", headers=auth_headers, json=account_data)
             results.append(response.status_code)
         
-        # All should succeed with unique codes
+        # All should succeed with unique names and codes
         assert all(status == 200 for status in results)
 
+    @pytest.mark.skip(reason="Ledger uses external auth service - no local user management")
     def test_concurrent_user_operations(self, auth_headers):
         """Test concurrent user-related operations."""
         # Create multiple users rapidly
@@ -255,7 +255,7 @@ class TestIntegration:
         # Step 1: Create accounts for a complete business scenario
         accounts_to_create = [
             {"name": "Integration Cash", "type": "asset", "code": "INT-CASH"},
-            {"name": "Integration Revenue", "type": "revenue", "code": "INT-REV"},
+            {"name": "Integration Revenue", "type": "income", "code": "INT-REV"},
             {"name": "Integration Expense", "type": "expense", "code": "INT-EXP"},
             {"name": "Integration AR", "type": "asset", "code": "INT-AR"}
         ]
@@ -311,6 +311,7 @@ class TestIntegration:
             assert "SALE-001" in references
             assert "EXP-001" in references
 
+    @pytest.mark.skip(reason="Ledger uses external auth service - no local user management")
     def test_user_workflow_integration(self, auth_headers):
         """Test complete user management workflow."""
         # Step 1: Create a new user

@@ -39,9 +39,9 @@ class MockTransactionLine:
         self.amount = amount
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="function")
 async def setup_test_accounts(db_session: AsyncSession):
-    """Setup test accounts for validation testing"""
+    """Setup test accounts for validation testing (per-test scope for isolation)"""
     
     class MockAccountData:
         def __init__(self, name, code, type, description):
