@@ -52,7 +52,7 @@ from app.services.ledger import Base
 
 # Import all models to ensure they're registered with Base
 from app.services.ledger import Account, Transaction, TransactionLine
-from app.auth.models import User, Role, Permission, UserSession
+# Note: Ledger uses external auth service - no local auth models needed
 
 # Override the get_db dependency immediately
 async def override_get_db():

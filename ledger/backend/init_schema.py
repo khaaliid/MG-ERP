@@ -30,7 +30,7 @@ async def initialize_database():
         
         # Import models to ensure they're registered
         from app.services.ledger import Base
-        from app.auth.models import User, Role, Permission, UserSession
+        # Note: Ledger uses external auth service via HTTP - no local auth models
         
         # Create all tables
         async with engine.begin() as conn:
