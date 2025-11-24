@@ -15,19 +15,27 @@ parent_dir = current_dir.parent
 sys.path.insert(0, str(parent_dir))
 
 # IMPORTANT: Override database config BEFORE importing anything
-os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
+# Use PostgreSQL if DATABASE_URL is provided (CI), otherwise use SQLite (local)
+TEST_DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "sqlite+aiosqlite:///:memory:"
+)
+os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 
 # Import and patch the config module directly
 from app import config
-config.DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+config.DATABASE_URL = TEST_DATABASE_URL
 
 # Patch the engine and session in config too
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 
+# Determine if we're using PostgreSQL or SQLite
+is_postgres = TEST_DATABASE_URL.startswith("postgresql")
+
 # Create test engine and override config
 test_engine = create_async_engine(
-    "sqlite+aiosqlite:///:memory:",
+    TEST_DATABASE_URL,
     echo=False,
     future=True
 )
@@ -54,6 +62,16 @@ from app.services.ledger import Base
 from app.services.ledger import Account, Transaction, TransactionLine
 # Note: Ledger uses external auth service - no local auth models needed
 
+# Patch schema for SQLite only (SQLite doesn't support PostgreSQL schemas)
+if not is_postgres:
+    import app.services.ledger as ledger_module
+    ledger_module.SCHEMA_NAME = None
+    
+    # Remove schema from all table args for SQLite compatibility
+    for table in Base.metadata.tables.values():
+        if hasattr(table, 'schema'):
+            table.schema = None
+
 # Override the get_db dependency immediately
 async def override_get_db():
     async with TestAsyncSession() as session:
@@ -69,6 +87,11 @@ app.dependency_overrides[get_db] = override_get_db
 async def setup_test_database():
     """Setup test database with all tables."""
     async with test_engine.begin() as conn:
+        # For PostgreSQL, create schema first
+        if is_postgres:
+            from sqlalchemy import text
+            await conn.execute(text("CREATE SCHEMA IF NOT EXISTS ledger"))
+        
         await conn.run_sync(Base.metadata.create_all)
 
 # Run the async setup synchronously using asyncio
