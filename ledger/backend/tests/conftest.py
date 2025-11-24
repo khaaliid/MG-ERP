@@ -133,33 +133,46 @@ def event_loop():
 
 
 @pytest.fixture
+def mock_current_user():
+    """Mock user data for tests (simulates authenticated user from external auth)."""
+    return {
+        "user_id": 1,
+        "username": "testuser",
+        "email": "test@example.com",
+        "role": "admin",
+        "permissions": ["read", "write", "delete"]
+    }
+
+
+@pytest.fixture
 def admin_token():
-    """Get admin token for authenticated requests."""
-    try:
-        # First, trigger system initialization
-        response = client.get("/")
-        print(f"Health check: {response.status_code}")
-        assert response.status_code == 200
-        
-        # Login with admin credentials
-        response = client.post(
-            "/api/v1/auth/login",
-            data={"username": "admin", "password": "admin123"}
-        )
-        
-        print(f"Login response: {response.status_code}")
-        if response.status_code != 200:
-            print(f"Login error: {response.text}")
-            
-        assert response.status_code == 200
-        token_data = response.json()
-        return token_data["access_token"]
-    except Exception as e:
-        print(f"Error in admin_token fixture: {e}")
-        raise
+    """Mock admin token for authenticated requests.
+    
+    Note: Ledger uses external auth service. In tests, we mock the auth
+    by overriding the get_current_user dependency.
+    """
+    # Return a dummy token - the actual validation is mocked
+    return "mock_test_token_12345"
 
 
 @pytest.fixture
 def auth_headers(admin_token):
     """Generate authorization headers with admin token."""
     return {"Authorization": f"Bearer {admin_token}"}
+
+
+@pytest.fixture(autouse=True)
+def override_auth(mock_current_user):
+    """Override the authentication dependency for tests.
+    
+    This fixture automatically mocks external auth for all tests,
+    so tests don't need to call the external auth service.
+    """
+    from app.external_auth import get_current_user
+    
+    async def mock_get_current_user():
+        return mock_current_user
+    
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    yield
+    app.dependency_overrides.clear()
