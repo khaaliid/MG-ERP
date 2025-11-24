@@ -118,8 +118,22 @@ async def db_session():
     """Create a new database session for each test."""
     async with TestAsyncSession() as session:
         yield session
-        await session.rollback()  # Rollback any uncommitted changes
+        # Rollback any uncommitted changes
+        await session.rollback()
         await session.close()
+    
+    # Clean up all data after each test to ensure isolation
+    async with test_engine.begin() as conn:
+        # For PostgreSQL, truncate tables (faster than DELETE)
+        # For SQLite, delete all rows
+        if is_postgres:
+            from sqlalchemy import text
+            await conn.execute(text("TRUNCATE TABLE ledger.transaction_lines CASCADE"))
+            await conn.execute(text("TRUNCATE TABLE ledger.transactions CASCADE"))
+            await conn.execute(text("TRUNCATE TABLE ledger.accounts CASCADE"))
+        else:
+            await conn.run_sync(Base.metadata.drop_all)
+            await conn.run_sync(Base.metadata.create_all)
 
 
 # Override the get_db dependency to use per-test session
