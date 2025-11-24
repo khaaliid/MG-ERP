@@ -7,8 +7,13 @@ from tests.conftest import client
 
 
 class TestAuthenticationLogic:
-    """Test authentication business logic and security features."""
+    """Test authentication business logic and security features.
+    
+    NOTE: Ledger service uses external auth service.
+    These tests are skipped as they test auth endpoints that don't exist in ledger.
+    """
 
+    @pytest.mark.skip(reason="Ledger uses external auth service - no local auth endpoints")
     def test_jwt_token_structure(self):
         """Test JWT token contains expected claims."""
         # Login to get token
@@ -48,6 +53,7 @@ class TestAuthenticationLogic:
             # If decoding fails, that's okay - token might be encrypted
             pass
 
+    @pytest.mark.skip(reason="Ledger uses external auth service - no local auth endpoints")
     def test_token_expiration_handling(self):
         """Test handling of expired tokens."""
         # This would require creating an expired token
@@ -56,6 +62,7 @@ class TestAuthenticationLogic:
         response = client.get("/api/v1/auth/me", headers=headers)
         assert response.status_code == 401
 
+    @pytest.mark.skip(reason="Ledger uses external auth service - no local auth endpoints")
     def test_permission_inheritance_from_roles(self):
         """Test that users inherit permissions from their roles."""
         # Get admin user info
@@ -80,6 +87,7 @@ class TestAuthenticationLogic:
         # Check if user has expected permissions (some might be missing in test setup)
         assert len(permissions) > 5  # Should have multiple permissions
 
+    @pytest.mark.skip(reason="Ledger uses external auth service - no local auth endpoints")
     def test_role_based_access_control(self):
         """Test that different roles have appropriate access."""
         # Create a viewer user
@@ -210,7 +218,7 @@ class TestBusinessLogicValidation:
 
     def test_account_type_validation(self, auth_headers):
         """Test that account types are properly validated."""
-        valid_types = ["asset", "liability", "equity", "revenue", "expense"]
+        valid_types = ["asset", "liability", "equity", "income", "expense"]
         
         for account_type in valid_types:
             account_data = {

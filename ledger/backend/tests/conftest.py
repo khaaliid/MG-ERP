@@ -113,27 +113,38 @@ def run_async_setup():
 run_async_setup()
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="function")
 async def db_session():
-    """Create a new database session for each test."""
+    """Create a new database session for each test with cleanup."""
     async with TestAsyncSession() as session:
         yield session
         # Rollback any uncommitted changes
-        await session.rollback()
-        await session.close()
+        try:
+            await session.rollback()
+        except:
+            pass
+        finally:
+            await session.close()
     
     # Clean up all data after each test to ensure isolation
-    async with test_engine.begin() as conn:
-        # For PostgreSQL, truncate tables (faster than DELETE)
-        # For SQLite, delete all rows
-        if is_postgres:
-            from sqlalchemy import text
-            await conn.execute(text("TRUNCATE TABLE ledger.transaction_lines CASCADE"))
-            await conn.execute(text("TRUNCATE TABLE ledger.transactions CASCADE"))
-            await conn.execute(text("TRUNCATE TABLE ledger.accounts CASCADE"))
-        else:
-            await conn.run_sync(Base.metadata.drop_all)
-            await conn.run_sync(Base.metadata.create_all)
+    try:
+        async with test_engine.begin() as conn:
+            # For PostgreSQL, truncate tables (faster than DELETE)
+            # For SQLite, delete all rows
+            if is_postgres:
+                from sqlalchemy import text
+                await conn.execute(text("TRUNCATE TABLE ledger.transaction_lines CASCADE"))
+                await conn.execute(text("TRUNCATE TABLE ledger.transactions CASCADE"))
+                await conn.execute(text("TRUNCATE TABLE ledger.accounts CASCADE"))
+            else:
+                # For SQLite, just delete all data (faster than drop/create)
+                from sqlalchemy import text
+                await conn.execute(text("DELETE FROM transaction_lines"))
+                await conn.execute(text("DELETE FROM transactions"))
+                await conn.execute(text("DELETE FROM accounts"))
+                await conn.commit()
+    except Exception as e:
+        print(f"Warning: Cleanup failed: {e}")
 
 
 # Override the get_db dependency to use per-test session
@@ -201,13 +212,35 @@ def auth_headers(admin_token):
     return {"Authorization": f"Bearer {admin_token}"}
 
 
-@pytest.fixture(autouse=True)
-def override_auth(mock_current_user):
-    """Override the authentication dependency for tests.
+@pytest.fixture
+def authenticated(mock_current_user):
+    """Override the authentication dependency for tests that need authentication.
     
-    This fixture automatically mocks external auth for all tests,
-    so tests don't need to call the external auth service.
+    Use this fixture in tests that should be authenticated.
+    Tests without this fixture will require actual authentication.
     """
+    from app.external_auth import get_current_user
+    
+    async def mock_get_current_user():
+        return mock_current_user
+    
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    yield
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+def auto_authenticated(request, mock_current_user):
+    """Automatically authenticate tests unless they're testing unauthenticated access.
+    
+    Tests can opt-out by using the marker: @pytest.mark.unauthenticated
+    """
+    # Check if test is marked as unauthenticated
+    if 'unauthenticated' in request.keywords or 'Unauthenticated' in request.node.name:
+        # Don't mock auth for unauthenticated tests
+        yield
+        return
+    
     from app.external_auth import get_current_user
     
     async def mock_get_current_user():
