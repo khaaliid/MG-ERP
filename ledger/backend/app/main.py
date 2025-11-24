@@ -8,9 +8,10 @@ from .services.ledger import Base, Account, AccountType
 from sqlalchemy import select
 from .api.router import api_router
 from .logging_config import setup_logging
+from .config import AUTH_SERVICE_URL
 
-# External Auth Service Configuration
-AUTH_SERVICE_URL = "http://localhost:8004/api/v1/auth"
+# External Auth Service Configuration (from environment)
+AUTH_API_URL = f"{AUTH_SERVICE_URL}/api/v1/auth"
 
 # Setup logging
 logger = setup_logging()
@@ -139,7 +140,7 @@ async def startup_event():
         # Test auth service connection
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.get(f"{AUTH_SERVICE_URL.replace('/api/v1/auth', '')}/health")
+                response = await client.get(f"{AUTH_SERVICE_URL}/health")
                 if response.status_code == 200:
                     logger.info("[SUCCESS] Auth service connection verified")
                 else:
@@ -221,7 +222,7 @@ def detailed_health_check():
         "version": "1.0.0",
         "database": "PostgreSQL",
         "authentication": "External Auth Service (JWT Bearer Token)",
-        "auth_service": AUTH_SERVICE_URL,
+        "auth_service": AUTH_API_URL,
         "documentation": {
             "swagger_ui": "/docs",
             "redoc": "/redoc",

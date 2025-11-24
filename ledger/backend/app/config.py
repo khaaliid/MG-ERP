@@ -26,6 +26,9 @@ SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 # Schema configuration
 LEDGER_SCHEMA = "ledger"
 
+# Auth Service Integration
+AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8004")
+
 # Async session generator
 async def get_session():
     """Get async database session."""

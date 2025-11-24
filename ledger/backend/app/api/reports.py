@@ -30,10 +30,10 @@ router = APIRouter(
            **Permission Required:** `financial:read`
            
            The Trial Balance lists all accounts with their debit and credit balances:
-           - ✅ Verifies that total debits equal total credits
-           - 📈 Shows account balances by type (Assets, Liabilities, Equity, Income, Expenses)
-           - 🎯 Essential for ensuring books are in balance
-           - 📅 Can be generated for any specific date
+           - Verifies that total debits equal total credits
+           - Shows account balances by type (Assets, Liabilities, Equity, Income, Expenses)
+           - Essential for ensuring books are in balance
+           - Can be generated for any specific date
            """)
 async def get_trial_balance(
     as_of_date: Optional[str] = Query(None, description="Date in YYYY-MM-DD format (default: current date)"),
@@ -41,7 +41,7 @@ async def get_trial_balance(
     current_user: dict = Depends(get_current_user)
 ):
     """Generate Trial Balance report."""
-    logger.info(f"[REPORT] Trial Balance requested by user: {current_user.get("username")}")
+    logger.info(f"[REPORT] Trial Balance requested by user: {current_user.get('username')}")
     logger.info(f"[DEBUG] User details: is_superuser={current_user.is_superuser}, role={current_user.role}, permissions={current_user.permissions}")
     
     try:
@@ -82,7 +82,7 @@ async def get_balance_sheet(
     current_user: dict = Depends(get_current_user)
 ):
     """Generate Balance Sheet report."""
-    logger.info(f"[REPORT] Balance Sheet requested by user: {current_user.get("username")}")
+    logger.info(f"[REPORT] Balance Sheet requested by user: {current_user.get('username')}")
     
     try:
         # Parse date if provided
@@ -123,7 +123,7 @@ async def get_income_statement(
     current_user: dict = Depends(get_current_user)
 ):
     """Generate Income Statement (Profit & Loss) report."""
-    logger.info(f"[REPORT] Income Statement requested by user: {current_user.get("username")} from {start_date} to {end_date or 'current'}")
+    logger.info(f"[REPORT] Income Statement requested by user: {current_user.get('username')} from {start_date} to {end_date or 'current'}")
     
     try:
         # Parse dates
@@ -172,7 +172,7 @@ async def get_general_ledger(
     current_user: dict = Depends(get_current_user)
 ):
     """Generate General Ledger report."""
-    logger.info(f"[REPORT] General Ledger requested by user: {current_user.get("username")} for account {account_id or 'ALL'}")
+    logger.info(f"[REPORT] General Ledger requested by user: {current_user.get('username')} for account {account_id or 'ALL'}")
     logger.info(f"[DEBUG] User details: is_superuser={current_user.is_superuser}, role={current_user.role}, permissions={current_user.permissions}")
     
     try:
@@ -223,7 +223,7 @@ async def get_cash_flow_statement(
     current_user: dict = Depends(get_current_user)
 ):
     """Generate Cash Flow Statement."""
-    logger.info(f"[REPORT] Cash Flow Statement requested by user: {current_user.get("username")} from {start_date} to {end_date or 'current'}")
+    logger.info(f"[REPORT] Cash Flow Statement requested by user: {current_user.get('username')} from {start_date} to {end_date or 'current'}")
     
     try:
         # Parse dates
@@ -269,7 +269,7 @@ async def get_financial_dashboard(
     current_user: dict = Depends(get_current_user)
 ):
     """Generate comprehensive financial dashboard."""
-    logger.info(f"[REPORT] Financial Dashboard requested by user: {current_user.get("username")}")
+    logger.info(f"[REPORT] Financial Dashboard requested by user: {current_user.get('username')}")
     
     try:
         current_date = datetime.now(timezone.utc)

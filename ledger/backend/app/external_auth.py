@@ -2,8 +2,9 @@ import httpx
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional
+from .config import AUTH_SERVICE_URL
 
-AUTH_SERVICE_URL = "http://localhost:8004/api/v1/auth/profile"
+AUTH_PROFILE_URL = f"{AUTH_SERVICE_URL}/api/v1/auth/profile"
 security = HTTPBearer()
 
 async def get_current_user(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
@@ -15,7 +16,7 @@ async def get_current_user(request: Request, credentials: HTTPAuthorizationCrede
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(
-                AUTH_SERVICE_URL,
+                AUTH_PROFILE_URL,
                 headers={"Authorization": f"Bearer {token}"},
                 timeout=5.0
             )
