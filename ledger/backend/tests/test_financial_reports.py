@@ -3,6 +3,7 @@ Comprehensive tests for the financial reporting system.
 Tests all major financial reports and their accuracy.
 """
 import pytest
+import pytest_asyncio
 from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone, timedelta
@@ -45,7 +46,7 @@ class MockTransactionLine:
         self.amount = amount
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def setup_comprehensive_accounts(db_session: AsyncSession):
     """Setup comprehensive chart of accounts for testing"""
     
@@ -87,7 +88,7 @@ async def setup_comprehensive_accounts(db_session: AsyncSession):
     return created_accounts
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def setup_sample_transactions(db_session: AsyncSession, setup_comprehensive_accounts):
     """Create sample transactions for testing reports"""
     

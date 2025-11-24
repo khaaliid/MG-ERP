@@ -3,6 +3,7 @@ Comprehensive tests for double-entry bookkeeping validation system.
 Tests enterprise-grade validation features and accounting equation integrity.
 """
 import pytest
+import pytest_asyncio
 from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone
@@ -38,7 +39,7 @@ class MockTransactionLine:
         self.amount = amount
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def setup_test_accounts(db_session: AsyncSession):
     """Setup test accounts for validation testing"""
     
