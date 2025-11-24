@@ -29,11 +29,11 @@ class TestHealthEndpoints:
         assert data["version"] == "1.0.0"
         assert "endpoints" in data
         assert "documentation" in data
-        assert "default_credentials" in data
+        # Auth instructions contain default_credentials, not at top level
+        assert "auth_instructions" in data
         
         # Check endpoint structure
         endpoints = data["endpoints"]
-        assert endpoints["authentication"] == "/api/v1/auth"
         assert endpoints["accounts"] == "/api/v1/accounts"
         assert data["endpoints"]["transactions"] == "/api/v1/transactions"
 

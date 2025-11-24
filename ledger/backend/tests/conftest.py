@@ -113,9 +113,30 @@ def run_async_setup():
 run_async_setup()
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", autouse=True)
 async def db_session():
-    """Create a new database session for each test with cleanup."""
+    """Create a new database session for each test with cleanup.
+    
+    This fixture is autouse=True so every test gets a clean database.
+    """
+    # Clean up BEFORE test to ensure clean state
+    try:
+        async with test_engine.begin() as conn:
+            if is_postgres:
+                from sqlalchemy import text
+                await conn.execute(text("TRUNCATE TABLE ledger.transaction_lines CASCADE"))
+                await conn.execute(text("TRUNCATE TABLE ledger.transactions CASCADE"))
+                await conn.execute(text("TRUNCATE TABLE ledger.accounts CASCADE"))
+            else:
+                from sqlalchemy import text
+                await conn.execute(text("DELETE FROM transaction_lines"))
+                await conn.execute(text("DELETE FROM transactions"))
+                await conn.execute(text("DELETE FROM accounts"))
+    except Exception as e:
+        # On first run, tables might not exist yet
+        pass
+    
+    # Provide session for test
     async with TestAsyncSession() as session:
         yield session
         # Rollback any uncommitted changes
@@ -125,26 +146,6 @@ async def db_session():
             pass
         finally:
             await session.close()
-    
-    # Clean up all data after each test to ensure isolation
-    try:
-        async with test_engine.begin() as conn:
-            # For PostgreSQL, truncate tables (faster than DELETE)
-            # For SQLite, delete all rows
-            if is_postgres:
-                from sqlalchemy import text
-                await conn.execute(text("TRUNCATE TABLE ledger.transaction_lines CASCADE"))
-                await conn.execute(text("TRUNCATE TABLE ledger.transactions CASCADE"))
-                await conn.execute(text("TRUNCATE TABLE ledger.accounts CASCADE"))
-            else:
-                # For SQLite, just delete all data (faster than drop/create)
-                from sqlalchemy import text
-                await conn.execute(text("DELETE FROM transaction_lines"))
-                await conn.execute(text("DELETE FROM transactions"))
-                await conn.execute(text("DELETE FROM accounts"))
-                await conn.commit()
-    except Exception as e:
-        print(f"Warning: Cleanup failed: {e}")
 
 
 # Override the get_db dependency to use per-test session
