@@ -255,7 +255,7 @@ class TestAccountEndpoints:
         """Test listing accounts without authentication."""
         response = client.get("/api/v1/accounts")
         
-        assert response.status_code == 403
+        assert response.status_code == 401  # HTTPBearer returns 401 for missing credentials
 
     def test_create_account_success(self, auth_headers):
         """Test creating a new account successfully."""
@@ -284,10 +284,21 @@ class TestAccountEndpoints:
 
     def test_create_account_duplicate_code(self, auth_headers):
         """Test creating account with duplicate code."""
+        # First create an account with code "1001"
+        first_account = {
+            "name": "First Account",
+            "type": "asset",
+            "code": "1001",
+            "description": "First account"
+        }
+        response1 = client.post("/api/v1/accounts", headers=auth_headers, json=first_account)
+        assert response1.status_code == 200
+        
+        # Try to create another account with the same code
         account_data = {
             "name": "Duplicate Code Account",
             "type": "asset",
-            "code": "1001",  # Same as previous test
+            "code": "1001",  # Same as first account
             "description": "This should fail due to duplicate code"
         }
         
@@ -343,7 +354,7 @@ class TestAccountEndpoints:
         }
         
         response = client.post("/api/v1/accounts", json=account_data)
-        assert response.status_code == 403
+        assert response.status_code == 401  # HTTPBearer returns 401 for missing credentials
 
 
 class TestTransactionEndpoints:
@@ -361,7 +372,7 @@ class TestTransactionEndpoints:
         """Test listing transactions without authentication."""
         response = client.get("/api/v1/transactions")
         
-        assert response.status_code == 403
+        assert response.status_code == 401  # HTTPBearer returns 401 for missing credentials
 
     def test_create_transaction_success(self, auth_headers):
         """Test creating a balanced transaction successfully."""
@@ -519,7 +530,7 @@ class TestTransactionEndpoints:
         }
         
         response = client.post("/api/v1/transactions", json=transaction_data)
-        assert response.status_code == 403
+        assert response.status_code == 401  # HTTPBearer returns 401 for missing credentials
 
     def test_get_transaction_by_id(self, auth_headers):
         """Test getting transaction by ID."""
