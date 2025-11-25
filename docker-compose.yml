@@ -1,0 +1,179 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mguser
+      POSTGRES_PASSWORD: mgpassword
+      POSTGRES_DB: mgerp
+    volumes:
+      - mg-erp-pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mguser -d mgerp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mg-erp-network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: unless-stopped
+    user: root
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "user@mgdonlinestore.com"
+      PGADMIN_DEFAULT_PASSWORD: "password"
+    volumes:
+      - db-data:/var/lib/pgadmin
+      - ./servers.json:/pgadmin4/servers.json
+      - ./pgpass:/pgpass
+    ports:
+      - "8088:80"
+    depends_on:
+      - postgres
+    networks:
+      - mg-erp-network
+
+  # Auth Service
+  auth:
+    image: ghcr.io/khaaliid/mg-erp/mg-auth:main-58cde85
+    container_name: mg-erp-auth
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://mguser:mgpassword@postgres:5432/mgerp
+      SECRET_KEY: ${JWT_SECRET_KEY:-your-secret-key-change-in-production}
+      JWT_ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      LOG_LEVEL: INFO
+      ENVIRONMENT: production
+      DEBUG: "false"
+    ports:
+      - "8004:8004"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8004/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - mg-erp-network
+
+  # Ledger Service
+  ledger:
+    image: ghcr.io/khaaliid/mg-erp/mg-ledger:main-622ecd2
+    container_name: mg-erp-ledger
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://mguser:mgpassword@postgres:5432/mgerp
+      AUTH_SERVICE_URL: http://auth:8004
+      LOG_LEVEL: INFO
+      ENVIRONMENT: production
+      DEBUG: "false"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - mg-erp-network
+
+  # Inventory Service
+  inventory:
+    image: ghcr.io/khaaliid/mg-erp/mg-inventory:main-3b453c7
+    container_name: mg-erp-inventory
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://mguser:mgpassword@postgres:5432/mgerp
+      AUTH_SERVICE_URL: http://auth:8004
+      LOG_LEVEL: INFO
+      ENVIRONMENT: production
+      DEBUG: "false"
+    ports:
+      - "8002:8002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - mg-erp-network
+
+  # POS Backend Service
+  pos-backend:
+    image: mg-pos:0.0.2
+    container_name: mg-erp-pos-backend
+    restart: unless-stopped
+    environment:
+      AUTH_SERVICE_URL: http://auth:8004
+      INVENTORY_SERVICE_URL: http://inventory:8002
+      LEDGER_SERVICE_URL: http://ledger:8000
+      LOG_LEVEL: INFO
+      ENVIRONMENT: production
+      DEBUG: "false"
+    ports:
+      - "8001:8001"
+    depends_on:
+      auth:
+        condition: service_healthy
+      inventory:
+        condition: service_healthy
+      ledger:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8001/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - mg-erp-network
+
+  # POS Frontend
+  pos-frontend:
+    image: mg-pos-frontend:0.0.1-SNAPSHOT
+    container_name: mg-erp-pos-frontend
+    restart: unless-stopped
+    ports:
+      - "3001:80"
+    depends_on:
+      - pos-backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - mg-erp-network
+
+volumes:
+  mg-erp-pgdata:
+    external: true
+    name: db_mg-erp-pgdata
+  db-data:
+    external: true
+    name: db_db-data
+
+networks:
+  mg-erp-network:
+    driver: bridge
