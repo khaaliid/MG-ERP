@@ -417,6 +417,14 @@ class TestTransactionEndpoints:
 
     def test_create_transaction_unbalanced(self, auth_headers):
         """Test creating unbalanced transaction (should fail)."""
+        # Create test accounts first
+        client.post("/api/v1/accounts", headers=auth_headers, json={
+            "name": "Test Cash", "type": "asset", "code": "TC-UNB"
+        })
+        client.post("/api/v1/accounts", headers=auth_headers, json={
+            "name": "Test Expense", "type": "expense", "code": "TE-UNB"
+        })
+        
         transaction_data = {
             "description": "Unbalanced transaction",
             "lines": [
@@ -515,7 +523,15 @@ class TestTransactionEndpoints:
 
     def test_get_transaction_by_id(self, auth_headers):
         """Test getting transaction by ID."""
-        # Create a transaction first
+        # Create test accounts first
+        client.post("/api/v1/accounts", headers=auth_headers, json={
+            "name": "Test Cash", "type": "asset", "code": "TC-ID"
+        })
+        client.post("/api/v1/accounts", headers=auth_headers, json={
+            "name": "Test Expense", "type": "expense", "code": "TE-ID"
+        })
+        
+        # Create a transaction
         transaction_data = {
             "description": "Transaction for ID test",
             "lines": [
@@ -561,7 +577,15 @@ class TestEdgeCases:
     """Test edge cases and error scenarios."""
 
     def test_large_transaction_amounts(self, auth_headers):
-        """Test transaction with large amounts."""
+        """Test transaction with very large amounts."""
+        # Create test accounts first
+        client.post("/api/v1/accounts", headers=auth_headers, json={
+            "name": "Test Cash", "type": "asset", "code": "TC-LRG"
+        })
+        client.post("/api/v1/accounts", headers=auth_headers, json={
+            "name": "Test Expense", "type": "expense", "code": "TE-LRG"
+        })
+        
         transaction_data = {
             "description": "Large amount transaction",
             "lines": [
@@ -590,6 +614,14 @@ class TestEdgeCases:
 
     def test_zero_amount_transaction(self, auth_headers):
         """Test transaction with zero amounts."""
+        # Create test accounts first
+        client.post("/api/v1/accounts", headers=auth_headers, json={
+            "name": "Test Cash", "type": "asset", "code": "TC-ZRO"
+        })
+        client.post("/api/v1/accounts", headers=auth_headers, json={
+            "name": "Test Expense", "type": "expense", "code": "TE-ZRO"
+        })
+        
         transaction_data = {
             "description": "Zero amount transaction",
             "lines": [
@@ -617,6 +649,14 @@ class TestEdgeCases:
 
     def test_negative_amount_transaction(self, auth_headers):
         """Test transaction with negative amounts."""
+        # Create test accounts first
+        client.post("/api/v1/accounts", headers=auth_headers, json={
+            "name": "Test Cash", "type": "asset", "code": "TC-NEG"
+        })
+        client.post("/api/v1/accounts", headers=auth_headers, json={
+            "name": "Test Expense", "type": "expense", "code": "TE-NEG"
+        })
+        
         transaction_data = {
             "description": "Negative amount transaction",
             "lines": [
