@@ -175,14 +175,7 @@ const ProductList: React.FC<ProductListProps> = ({
     return filtered;
   }, [products, searchTerm, selectedCategory, priceRange, sortBy, sortOrder]);
 
-  const handleSort = (field: typeof sortBy) => {
-    if (sortBy === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(field);
-      setSortOrder('asc');
-    }
-  };
+  // handleSort function removed - not currently used in UI
 
   const getStockStatus = (stock: number) => {
     if (stock === 0) return { status: 'out-of-stock', label: 'Out of Stock', color: 'bg-red-100 text-red-800' };

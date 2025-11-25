@@ -132,7 +132,6 @@ export default function POS() {
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [tendered, setTendered] = useState("");
-  const [online, setOnline] = useState(true);
 
   // Load products and categories from backend
   useEffect(() => {
@@ -143,7 +142,6 @@ export default function POS() {
         
         // Check backend health
         await enhancedApiService.checkHealth();
-        setOnline(true);
         
         // Load products and categories in parallel
         const [productsResponse, categoriesData] = await Promise.all([
@@ -175,7 +173,6 @@ export default function POS() {
         console.error('Error loading data:', err);
         const message = err instanceof Error ? err.message : 'Failed to load data';
         setError(message);
-        setOnline(false);
         if (message.toLowerCase().includes('authentication required') || message.toLowerCase().includes('invalid or expired token')) {
           // Redirect to login when auth failed
           navigate('/login', { replace: true });

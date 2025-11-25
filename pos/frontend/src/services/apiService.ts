@@ -3,8 +3,9 @@
  * Handles communication with the POS backend and manages JWT tokens
  */
 
-const API_BASE_URL = 'http://localhost:8001/api/v1';
-const AUTH_BASE_URL = 'http://localhost:8004/api/v1/auth';
+// Use environment variables with fallback to localhost for development
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api/v1';
+const AUTH_BASE_URL = import.meta.env.VITE_AUTH_BASE_URL || 'http://localhost:8004/api/v1/auth';
 
 export interface Product {
   id: string;

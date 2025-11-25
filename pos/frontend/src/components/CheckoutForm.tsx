@@ -28,8 +28,8 @@ interface Customer {
 
 interface CheckoutFormProps {
   cartItems: CartItem[];
-  subtotal: number;
-  totalTax: number;
+  subtotal?: number;
+  totalTax?: number;
   total: number;
   customer?: Customer;
   onSaleComplete: (saleData: any) => void;
@@ -39,8 +39,8 @@ interface CheckoutFormProps {
 
 const CheckoutForm: React.FC<CheckoutFormProps> = ({
   cartItems,
-  subtotal,
-  totalTax,
+  subtotal = 0,
+  totalTax = 0,
   total,
   customer,
   onSaleComplete,

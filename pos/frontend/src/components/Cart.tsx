@@ -26,6 +26,7 @@ interface CartProps {
   onAddNote?: (productId: string, note: string) => void;
   onClearCart?: () => void;
   onCheckout: () => void;
+  total?: number;
   customerDiscount?: number;
   loyaltyPoints?: number;
   isProcessing?: boolean;

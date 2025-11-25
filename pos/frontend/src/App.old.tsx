@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import "./index.css";
-import { apiService, Product, Category, Brand } from "./services/apiService";
+import { apiService, Product, Category } from "./services/apiService";
 
 function formatEGP(v: number) {
   return `${v.toFixed(2)} EGP`;
@@ -151,7 +151,8 @@ export default function App() {
 
   function addToCart(product: Product) {
     // default size selection: first size
-    const size = product.sizes && product.sizes.length ? product.sizes[0] : null;
+    const sizeObj = product.sizes && product.sizes.length ? product.sizes[0] : null;
+    const size = typeof sizeObj === 'string' ? sizeObj : (sizeObj && typeof sizeObj === 'object' ? sizeObj.size : null);
     setCart((c) => {
       const idx = c.findIndex((i) => i.id === product.id && i.size === size);
       if (idx >= 0) {

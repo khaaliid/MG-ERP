@@ -12,8 +12,12 @@ import type {
   Sale,
   Product,
   Category,
-  Brand 
+  Brand,
+  User
 } from './apiService';
+
+// Re-export User type
+export type { User };
 
 // Type for loading context (will be injected)
 interface LoadingContextType {
