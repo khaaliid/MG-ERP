@@ -74,6 +74,27 @@ jobs:
           name: ledger-frontend-dist
           path: ledger/frontend/dist
           retention-days: 7
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./ledger/frontend
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/mg-erp/mg-ledger-frontend:latest
+            ghcr.io/${{ github.repository_owner }}/mg-erp/mg-ledger-frontend:${{ github.ref_name }}-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   inventory-frontend:
     name: Inventory Frontend
@@ -111,6 +132,27 @@ jobs:
           name: inventory-frontend-dist
           path: inventory/frontend/dist
           retention-days: 7
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./inventory/frontend
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/mg-erp/mg-inventory-frontend:latest
+            ghcr.io/${{ github.repository_owner }}/mg-erp/mg-inventory-frontend:${{ github.ref_name }}-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   pos-frontend:
     name: POS Frontend
@@ -148,3 +190,24 @@ jobs:
           name: pos-frontend-dist
           path: pos/frontend/dist
           retention-days: 7
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./pos/frontend
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/mg-erp/mg-pos-frontend:latest
+            ghcr.io/${{ github.repository_owner }}/mg-erp/mg-pos-frontend:${{ github.ref_name }}-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
