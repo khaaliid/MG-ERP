@@ -12,6 +12,10 @@ on:
       - '*/frontend/**'
       - '.github/workflows/frontend-ci.yml'
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   detect-changes:
     name: Detect Changed Frontends
@@ -85,14 +89,24 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/mg-ledger-frontend
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+      
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./ledger/frontend
           push: ${{ github.event_name != 'pull_request' }}
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/mg-erp/mg-ledger-frontend:latest
-            ghcr.io/${{ github.repository_owner }}/mg-erp/mg-ledger-frontend:${{ github.ref_name }}-${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -143,14 +157,24 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/mg-inventory-frontend
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+      
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./inventory/frontend
           push: ${{ github.event_name != 'pull_request' }}
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/mg-erp/mg-inventory-frontend:latest
-            ghcr.io/${{ github.repository_owner }}/mg-erp/mg-inventory-frontend:${{ github.ref_name }}-${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -201,13 +225,23 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/mg-pos-frontend
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+      
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./pos/frontend
           push: ${{ github.event_name != 'pull_request' }}
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/mg-erp/mg-pos-frontend:latest
-            ghcr.io/${{ github.repository_owner }}/mg-erp/mg-pos-frontend:${{ github.ref_name }}-${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
