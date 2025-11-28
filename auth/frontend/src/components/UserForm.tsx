@@ -39,7 +39,7 @@ const UserForm: React.FC<UserFormProps> = ({ user, onSubmit, onCancel, isLoading
     }
 
     try {
-      const submitData = { ...formData };
+      const submitData: Partial<typeof formData> = { ...formData };
       if (user) {
         // For updates, remove password fields if empty
         if (!submitData.password) {
