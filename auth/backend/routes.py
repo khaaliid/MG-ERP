@@ -346,6 +346,7 @@ async def list_users(
                 id=user.id,
                 email=user.email,
                 full_name=user.full_name,
+                username=user.username,
                 role=user.role,
                 is_active=user.is_active,
                 created_at=user.created_at,

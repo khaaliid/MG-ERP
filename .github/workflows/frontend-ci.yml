@@ -24,6 +24,7 @@ jobs:
       ledger: ${{ steps.filter.outputs.ledger }}
       inventory: ${{ steps.filter.outputs.inventory }}
       pos: ${{ steps.filter.outputs.pos }}
+      auth: ${{ steps.filter.outputs.auth }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v2
@@ -36,6 +37,8 @@ jobs:
               - 'inventory/frontend/**'
             pos:
               - 'pos/frontend/**'
+            auth:
+              - 'auth/frontend/**'
 
   ledger-frontend:
     name: Ledger Frontend
@@ -240,6 +243,79 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./pos/frontend
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  auth-frontend:
+    name: Auth Frontend
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.auth == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'auth/frontend/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: ./auth/frontend
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+      - name: Lint
+        working-directory: ./auth/frontend
+        run: npm run lint || echo "Lint failed or not configured"
+        continue-on-error: true
+
+      - name: Type check
+        working-directory: ./auth/frontend
+        run: npm run type-check || echo "Type check failed or not configured"
+        continue-on-error: true
+
+      - name: Build
+        working-directory: ./auth/frontend
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth-frontend-dist
+          path: auth/frontend/dist
+          retention-days: 7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/mg-auth-frontend
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./auth/frontend
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

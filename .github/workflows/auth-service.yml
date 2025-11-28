@@ -11,11 +11,18 @@ on:
     paths:
       - 'auth/**'
       - '.github/workflows/auth-service.yml'
+  workflow_dispatch:  # Allow manual trigger
+
+permissions:
+  contents: read
+  packages: write
+  pull-requests: write
 
 env:
   SERVICE_NAME: auth
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}/mg-auth
+  PYTHON_VERSION: '3.11'
 
 jobs:
   test:
@@ -44,34 +51,54 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
-          cache-dependency-path: 'auth/requirements.txt'
+          cache-dependency-path: 'auth/backend/requirements.txt'
+      
+      - name: Cache Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('auth/backend/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
       
       - name: Install dependencies
-        working-directory: ./auth
+        working-directory: ./auth/backend
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest pytest-asyncio pytest-cov httpx
       
-      - name: Run tests
-        working-directory: ./auth
-        env:
-          AUTH_DATABASE_URL: postgresql+asyncpg://mguser:mgpassword@localhost:5432/mgerp_test
-          SECRET_KEY: test-secret-key-for-ci
-          DEBUG: "false"
+      - name: Create database schema
         run: |
-          # Create auth schema
           PGPASSWORD=mgpassword psql -h localhost -U mguser -d mgerp_test -c "CREATE SCHEMA IF NOT EXISTS auth;"
-          
-          # Run tests with coverage
-          pytest -v --cov=. --cov-report=xml --cov-report=term
+      
+      - name: Run tests with coverage
+        working-directory: ./auth/backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://mguser:mgpassword@localhost:5432/mgerp_test
+          SECRET_KEY: test-secret-key-for-ci-${{ github.sha }}
+          DEBUG: "false"
+          ENVIRONMENT: test
+          LOG_LEVEL: DEBUG
+        run: |
+          pytest -v --cov=. --cov-report=xml --cov-report=term --cov-report=html --tb=short
+      
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: auth-test-results
+          path: |
+            auth/backend/coverage.xml
+            auth/backend/htmlcov/
+          retention-days: 7
       
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
         with:
-          files: ./auth/coverage.xml
+          files: ./auth/backend/coverage.xml
           flags: auth-service
           name: auth-coverage
         continue-on-error: true
@@ -87,37 +114,94 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Cache Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-lint-pip-${{ hashFiles('auth/backend/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-lint-pip-
       
       - name: Install linting tools
         run: |
           python -m pip install --upgrade pip
-          pip install flake8 black isort mypy
+          pip install flake8 black isort mypy pylint bandit safety
       
-      - name: Run black (formatter check)
-        working-directory: ./auth
+      - name: Run black (code formatting check)
+        working-directory: ./auth/backend
         run: black --check --diff .
         continue-on-error: true
       
       - name: Run isort (import sorting check)
-        working-directory: ./auth
+        working-directory: ./auth/backend
         run: isort --check-only --diff .
         continue-on-error: true
       
-      - name: Run flake8 (linting)
-        working-directory: ./auth
-        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+      - name: Run flake8 (style guide enforcement)
+        working-directory: ./auth/backend
+        run: |
+          # Stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Exit-zero treats all errors as warnings
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        continue-on-error: true
+      
+      - name: Run pylint (static code analysis)
+        working-directory: ./auth/backend
+        run: pylint **/*.py --exit-zero --output-format=text
+        continue-on-error: true
+      
+      - name: Run bandit (security linting)
+        working-directory: ./auth/backend
+        run: bandit -r . -f json -o bandit-report.json --exit-zero
+        continue-on-error: true
+      
+      - name: Check dependencies for vulnerabilities
+        working-directory: ./auth/backend
+        run: safety check --json --continue-on-error
+        continue-on-error: true
+      
+      - name: Upload lint results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: auth-lint-results
+          path: auth/backend/bandit-report.json
+          retention-days: 7
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: [test, lint]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: './auth/backend'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+        continue-on-error: true
+      
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
         continue-on-error: true
 
   build:
-    name: Build Auth Docker Image
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
-    needs: [test, lint]
+    needs: [test, lint, security-scan]
     if: github.event_name == 'push'
-    
-    permissions:
-      contents: read
-      packages: write
     
     steps:
       - name: Checkout code
@@ -145,11 +229,16 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.title=MG-ERP Auth Service
+            org.opencontainers.image.description=Authentication and authorization service for MG-ERP
+            org.opencontainers.image.vendor=MG-ERP
       
       - name: Build and push Docker image
+        id: build
         uses: docker/build-push-action@v5
         with:
-          context: ./auth
+          context: ./auth/backend
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -158,6 +247,21 @@ jobs:
           build-args: |
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
             VCS_REF=${{ github.sha }}
+            VERSION=${{ github.ref_name }}
+      
+      - name: Generate build summary
+        run: |
+          echo "## 🐳 Docker Image Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Service:** Auth" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Tags:** ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Digest:** ${{ steps.build.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Pull Command" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
   deploy-staging:
     name: Deploy to Staging
@@ -172,11 +276,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
+      - name: Deploy notification
+        run: |
+          echo "## 🚀 Staging Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Service:** Auth" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** Staging" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 **URL:** https://staging-auth.mg-erp.com" >> $GITHUB_STEP_SUMMARY
+      
       - name: Deploy to staging
         run: |
           echo "🚀 Deploying auth service to staging environment"
+          echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:develop-${{ github.sha }}"
           # Add your deployment script here (e.g., kubectl, docker-compose, SSH)
-          # Example: ssh user@staging-server "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:develop && docker-compose up -d auth"
+          # Example: 
+          # ssh user@staging-server "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:develop-${{ github.sha }} && docker-compose up -d auth"
 
   deploy-production:
     name: Deploy to Production
@@ -191,8 +308,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
+      - name: Deploy notification
+        run: |
+          echo "## 🚀 Production Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Service:** Auth" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** Production" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 **URL:** https://auth.mg-erp.com" >> $GITHUB_STEP_SUMMARY
+      
       - name: Deploy to production
         run: |
           echo "🚀 Deploying auth service to production environment"
+          echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
           # Add your production deployment script here
-          # Example: kubectl set image deployment/auth auth=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          # Example:
+          # kubectl set image deployment/auth auth=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          # kubectl rollout status deployment/auth
