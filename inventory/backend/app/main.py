@@ -28,7 +28,19 @@ app = FastAPI(
 # CORS middleware - must be added BEFORE other middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3002", "http://localhost:3000", "http://127.0.0.1:3002", "http://127.0.0.1:3000"],  # Frontend URLs
+    allow_origins=[
+        # Local dev ports
+        "http://localhost:3002",
+        "http://localhost:3000",
+        "http://127.0.0.1:3002",
+        "http://127.0.0.1:3000",
+        # Nginx-served containers
+        "http://localhost:8082",
+        "http://127.0.0.1:8082",
+        # Host.docker.internal variants
+        "http://host.docker.internal:3002",
+        "http://host.docker.internal:8082",
+    ],  # Frontend URLs
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -59,7 +71,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             return response
         except Exception as e:
             process_time = time.time() - start_time
-            logger.error(f"💥 {request.method} {request.url.path} - Error: {str(e)} - Time: {process_time:.3f}s")
+            logger.error(f" {request.method} {request.url.path} - Error: {str(e)} - Time: {process_time:.3f}s")
             raise
 
 # Add the logging middleware

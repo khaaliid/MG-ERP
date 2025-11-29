@@ -28,7 +28,7 @@ const Dashboard = () => {
 
   // Calculate statistics from products data
   const totalProducts = products.length
-  const inStockProducts = products.filter(product => {
+  const inStockProducts = products.filter(() => {
     // Assuming we need to check stock levels - this might need adjustment based on actual data structure
     return true // For now, assume all products are in stock
   }).length

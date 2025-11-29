@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import CategoryForm, { CategoryFormData } from '../components/CategoryForm'
-import { categoryService, Category, CreateCategoryRequest } from '../services/categoryService'
+import { categoryService, Category, CategoryCreate } from '../services/categoryService'
 
 const Categories = () => {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -27,7 +27,7 @@ const Categories = () => {
     setError(null)
     try {
       const response = await categoryService.getCategories()
-      setCategories(response.data)
+      setCategories(response)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load categories')
       console.error('Error loading categories:', err)
@@ -41,10 +41,10 @@ const Categories = () => {
     setError(null)
     
     try {
-      const categoryData: CreateCategoryRequest = {
+      const categoryData: CategoryCreate = {
         name: data.name,
         description: data.description,
-        sizeType: data.sizeType
+        size_type: data.sizeType
       }
 
       await categoryService.createCategory(categoryData)
@@ -173,11 +173,11 @@ const Categories = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {getSizeTypeLabel(category.sizeType)}
+                          {getSizeTypeLabel(category.size_type)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(category.createdAt).toLocaleDateString()}
+                        {category.created_at ? new Date(category.created_at).toLocaleDateString() : '—'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button className="text-blue-600 hover:text-blue-900 mr-4">
