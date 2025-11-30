@@ -58,23 +58,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Check for existing token on app start
   useEffect(() => {
+    const url = new URL(window.location.href)
+    const ssoToken = url.searchParams.get('sso_token')
+    if (ssoToken) {
+      console.log('[SSO] Received sso_token from URL, storing token')
+      localStorage.setItem('auth_token', ssoToken)
+      setToken(ssoToken)
+      // remove token from URL for cleanliness
+      url.searchParams.delete('sso_token')
+      window.history.replaceState({}, document.title, url.toString())
+    }
+
     const savedToken = localStorage.getItem('auth_token');
     const savedUser = localStorage.getItem('auth_user');
     
     console.log('Checking auth state:', { savedToken, savedUser });
     
     const validate = async () => {
-      if (savedToken) {
+      if (savedToken || token) {
+        const toValidate = savedToken || token!
         try {
           const resp = await fetch('http://localhost:8004/api/v1/auth/profile', {
-            headers: { 'Authorization': `Bearer ${savedToken}` }
+            headers: { 'Authorization': `Bearer ${toValidate}` }
           });
           if (resp.ok) {
             const userObj = await resp.json();
-            setToken(savedToken);
+            setToken(toValidate);
             setUser(userObj);
             localStorage.setItem('auth_user', JSON.stringify(userObj));
-            scheduleExpiryLogout(savedToken);
+            scheduleExpiryLogout(toValidate);
           } else {
             console.warn('Token invalid; clearing stored auth');
             localStorage.removeItem('auth_token');

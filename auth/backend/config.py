@@ -46,14 +46,35 @@ class AuthSettings(BaseSettings):
     
     # CORS Settings
     CORS_ORIGINS: list = [
-        "http://localhost:3000",  # Frontend dev
-        "http://localhost:3001",  # Ledger frontend  
-        "http://localhost:3002",  # Inventory frontend
-        "http://localhost:3003",  # POS frontend
-        "http://localhost:5173",  # Vite dev
-        "http://localhost:8001",  # Service port
-        "http://localhost:8002",  # Service port
-        "http://localhost:8003",  # Service port
+        # Dev frontends
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:3002",
+        "http://localhost:3003",
+        "http://localhost:3005",  # Portal frontend
+        "http://localhost:5173",
+        # Nginx container frontends (if mapped differently)
+        "http://localhost:8080",
+        "http://localhost:8081",
+        "http://localhost:8082",
+        "http://localhost:8083",
+        "http://localhost:8085",  # Portal via container
+        # Service ports
+        "http://localhost:8001",
+        "http://localhost:8002",
+        "http://localhost:8003",
+        "http://localhost:8004",
+        # host.docker.internal variants for container-origin requests
+        "http://host.docker.internal:3000",
+        "http://host.docker.internal:3001",
+        "http://host.docker.internal:3002",
+        "http://host.docker.internal:3003",
+        "http://host.docker.internal:3005",
+        "http://host.docker.internal:8080",
+        "http://host.docker.internal:8081",
+        "http://host.docker.internal:8082",
+        "http://host.docker.internal:8083",
+        "http://host.docker.internal:8085",
     ]
     
     # Service URLs for cross-module authentication
