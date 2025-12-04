@@ -233,6 +233,8 @@ jobs:
             org.opencontainers.image.title=MG-ERP Auth Service
             org.opencontainers.image.description=Authentication and authorization service for MG-ERP
             org.opencontainers.image.vendor=MG-ERP
+      - name: Set date-based tag
+        run: echo "IMAGE_TAG=$(date +'%d-%m-%y-%H-%M')" >> $GITHUB_ENV
       
       - name: Build and push Docker image
         id: build
@@ -240,7 +242,9 @@ jobs:
         with:
           context: ./auth/backend
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ${{ steps.meta.outputs.tags }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

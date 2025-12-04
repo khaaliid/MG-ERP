@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 
 // Types
@@ -29,27 +29,90 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const expiryTimerRef = useRef<number | null>(null);
+
+  const logout = () => {
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    if (expiryTimerRef.current) {
+      window.clearTimeout(expiryTimerRef.current);
+      expiryTimerRef.current = null;
+    }
+  };
+
+  const scheduleExpiryLogout = (jwt: string) => {
+    try {
+      const [, payload] = jwt.split('.');
+      if (!payload) return;
+      const decoded = JSON.parse(atob(payload));
+      const expSec = decoded.exp;
+      if (!expSec) return;
+      const remainingMs = expSec * 1000 - Date.now();
+      if (expiryTimerRef.current) {
+        window.clearTimeout(expiryTimerRef.current);
+      }
+      if (remainingMs <= 0) {
+        console.warn('Token already expired – logging out');
+        logout();
+        return;
+      }
+      expiryTimerRef.current = window.setTimeout(() => {
+        console.warn('Token expiry reached – logging out');
+        logout();
+      }, remainingMs + 500);
+    } catch (e) {
+      console.warn('Failed to parse JWT for expiry', e);
+    }
+  };
 
   // Check for existing token on app start
   useEffect(() => {
+    const url = new URL(window.location.href);
+    const ssoToken = url.searchParams.get('sso_token');
+    if (ssoToken) {
+      console.log('[SSO] Received sso_token from URL, storing token');
+      localStorage.setItem('auth_token', ssoToken);
+      setToken(ssoToken);
+      url.searchParams.delete('sso_token');
+      window.history.replaceState({}, document.title, url.toString());
+    }
+
     const savedToken = localStorage.getItem('auth_token');
     const savedUser = localStorage.getItem('auth_user');
-    
+
     console.log('Checking auth state:', { savedToken, savedUser });
-    
-    if (savedToken && savedUser && savedUser !== 'undefined') {
-      try {
-        const userObj = JSON.parse(savedUser);
-        setToken(savedToken);
-        setUser(userObj);
-      } catch (error) {
-        console.error('Error parsing saved user:', error);
-        // Clear invalid data
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('auth_user');
+
+    const validate = async () => {
+      const toValidate = savedToken || token;
+      if (toValidate) {
+        try {
+          const resp = await fetch('http://localhost:8004/api/v1/auth/profile', {
+            headers: { Authorization: `Bearer ${toValidate}` },
+          });
+          if (resp.ok) {
+            const userObj = await resp.json();
+            setToken(toValidate);
+            setUser(userObj);
+            localStorage.setItem('auth_user', JSON.stringify(userObj));
+            scheduleExpiryLogout(toValidate);
+          } else {
+            console.warn('Token invalid; clearing stored auth');
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('auth_user');
+            setToken(null);
+            setUser(null);
+          }
+        } catch (e) {
+          console.error('Failed to validate token', e);
+          setToken(null);
+          setUser(null);
+        }
       }
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    };
+    validate();
   }, []);
 
   const login = async (username: string, password: string): Promise<boolean> => {
@@ -123,12 +186,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    setToken(null);
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
-  };
+  
 
   const value: AuthContextType = {
     user,

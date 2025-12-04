@@ -1,4 +1,5 @@
 import React from 'react'
+import { useAuth } from '../contexts/AuthContext'
 
 const modules = [
   { key: 'auth', name: 'Authentication', icon: '🔐', url: import.meta.env.VITE_MODULE_AUTH_URL || 'http://localhost:3000' },
@@ -8,6 +9,7 @@ const modules = [
 ]
 
 const Modules: React.FC = () => {
+  const { user, logout } = useAuth()
   const token = localStorage.getItem('auth_token') || ''
   const appendToken = (url: string) => {
     try {
@@ -22,7 +24,13 @@ const Modules: React.FC = () => {
   }
   return (
     <div style={{padding:24}}>
-      <h1 style={{fontSize:24, marginBottom:16}}>Modules</h1>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+        <h1 style={{fontSize:24}}>Modules</h1>
+        <div style={{display:'flex',alignItems:'center',gap:12}}>
+          {user && <span style={{fontSize:14,color:'#555'}}>Signed in as {user.email}</span>}
+          <button onClick={() => { logout(); }} style={{padding:'6px 12px',border:'1px solid #ccc',background:'#fff',cursor:'pointer',borderRadius:4}}>Logout</button>
+        </div>
+      </div>
       <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:16}}>
         {modules.map(m => (
           <a key={m.key} href={appendToken(m.url)} style={{textDecoration:'none'}} target="_blank" rel="noreferrer">

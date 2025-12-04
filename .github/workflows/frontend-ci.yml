@@ -105,13 +105,17 @@ jobs:
             type=ref,event=pr
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
+      - name: Set date-based tag
+        run: echo "IMAGE_TAG=$(date +'%d-%m-%y-%H-%M')" >> $GITHUB_ENV
       
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./ledger/frontend
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ${{ steps.meta.outputs.tags }}
+            ghcr.io/${{ github.repository }}/mg-ledger-frontend:${{ env.IMAGE_TAG }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -173,13 +177,17 @@ jobs:
             type=ref,event=pr
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
+      - name: Set date-based tag
+        run: echo "IMAGE_TAG=$(date +'%d-%m-%y-%H-%M')" >> $GITHUB_ENV
       
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./inventory/frontend
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ${{ steps.meta.outputs.tags }}
+            ghcr.io/${{ github.repository }}/mg-inventory-frontend:${{ env.IMAGE_TAG }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -241,13 +249,17 @@ jobs:
             type=ref,event=pr
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
+      - name: Set date-based tag
+        run: echo "IMAGE_TAG=$(date +'%d-%m-%y-%H-%M')" >> $GITHUB_ENV
       
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./pos/frontend
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ${{ steps.meta.outputs.tags }}
+            ghcr.io/${{ github.repository }}/mg-pos-frontend:${{ env.IMAGE_TAG }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -310,13 +322,17 @@ jobs:
             type=ref,event=pr
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
+      - name: Set date-based tag
+        run: echo "IMAGE_TAG=$(date +'%d-%m-%y-%H-%M')" >> $GITHUB_ENV
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./portal/frontend
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ${{ steps.meta.outputs.tags }}
+            ghcr.io/${{ github.repository }}/mg-portal-frontend:${{ env.IMAGE_TAG }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -383,13 +399,17 @@ jobs:
             type=ref,event=pr
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
+      - name: Set date-based tag
+        run: echo "IMAGE_TAG=$(date +'%d-%m-%y-%H-%M')" >> $GITHUB_ENV
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./auth/frontend
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ${{ steps.meta.outputs.tags }}
+            ghcr.io/${{ github.repository }}/mg-auth-frontend:${{ env.IMAGE_TAG }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

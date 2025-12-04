@@ -39,7 +39,7 @@ services:
 
   # Auth Service
   auth:
-    image: mg-auth:0.0.2
+    image: ghcr.io/khaaliid/mg-erp/mg-auth:main-37e887b
     container_name: mg-erp-auth
     restart: unless-stopped
     environment:
@@ -93,7 +93,7 @@ services:
 
   # Inventory Service
   inventory:
-    image: ghcr.io/khaaliid/mg-erp/mg-inventory:main-3b453c7
+    image: ghcr.io/khaaliid/mg-erp/mg-inventory:main-dffdae7
     container_name: mg-erp-inventory
     restart: unless-stopped
     environment:
@@ -120,7 +120,7 @@ services:
 
   # POS Backend Service
   pos-backend:
-    image: mg-pos:0.0.2
+    image: ghcr.io/khaaliid/mg-erp/mg-pos:main-0530bc2
     container_name: mg-erp-pos-backend
     restart: unless-stopped
     environment:
@@ -150,11 +150,11 @@ services:
 
   # POS Frontend
   pos-frontend:
-    image: mg-pos-frontend:0.0.1-SNAPSHOT
+    image: ghcr.io/khaaliid/mg-erp/mg-pos-frontend:main-74284ec
     container_name: mg-erp-pos-frontend
     restart: unless-stopped
     ports:
-      - "3001:80"
+      - "3003:80"
     depends_on:
       - pos-backend
     healthcheck:
@@ -167,22 +167,73 @@ services:
       - mg-erp-network
 
   # Auth Frontend
-  # auth-frontend:
-  #   image: mg-auth-frontend:0.0.1-SNAPSHOT
-  #   container_name: mg-erp-auth-frontend
-  #   restart: unless-stopped
-  #   ports:
-  #     - "3000:80"
-  #   depends_on:
-  #     - auth
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost/ || exit 1"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
-  #     start_period: 5s
-  #   networks:
-  #     - mg-erp-network
+  auth-frontend:
+    image: ghcr.io/khaaliid/mg-erp/mg-auth-frontend:main-bca9526
+    container_name: mg-erp-auth-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - auth
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - mg-erp-network
+
+  ledger-frontend:
+    image: ghcr.io/khaaliid/mg-erp/mg-ledger-frontend:main-6512c7f
+    container_name: mg-erp-ledger-frontend
+    restart: unless-stopped
+    ports:
+      - "3001:80"
+    depends_on:
+      - ledger
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - mg-erp-network
+
+  inventory-frontend:
+    image: ghcr.io/khaaliid/mg-erp/mg-inventory-frontend:main-37e887b
+    container_name: mg-erp-inventory-frontend
+    restart: unless-stopped
+    ports:
+      - "3002:80"
+    depends_on:
+      - inventory
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - mg-erp-network
+
+  portal-frontend:
+    image: mg-portal-frontend:0.0.1
+    container_name: mg-erp-portal-frontend
+    restart: unless-stopped
+    ports:
+      - "3005:80"
+    depends_on:
+      - auth
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - mg-erp-network
 
 volumes:
   mg-erp-pgdata:

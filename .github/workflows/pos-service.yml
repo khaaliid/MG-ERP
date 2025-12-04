@@ -150,6 +150,9 @@ jobs:
             type=ref,event=pr
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
+      - name: Set date-based tag
+        if: steps.check_dockerfile.outputs.dockerfile_exists == 'true'
+        run: echo "IMAGE_TAG=$(date +'%d-%m-%y-%H-%M')" >> $GITHUB_ENV
       
       - name: Build and push Docker image
         if: steps.check_dockerfile.outputs.dockerfile_exists == 'true'
@@ -157,7 +160,9 @@ jobs:
         with:
           context: ./pos/backend
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ${{ steps.meta.outputs.tags }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
