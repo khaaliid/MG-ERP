@@ -39,7 +39,7 @@ services:
 
   # Auth Service
   auth:
-    image: ghcr.io/khaaliid/mg-erp/mg-auth:main-37e887b
+    image: ghcr.io/khaaliid/mg-erp/mg-auth:latest
     container_name: mg-erp-auth
     restart: unless-stopped
     environment:
@@ -66,7 +66,7 @@ services:
 
   # Ledger Service
   ledger:
-    image: ghcr.io/khaaliid/mg-erp/mg-ledger:main-622ecd2
+    image: ghcr.io/khaaliid/mg-erp/mg-ledger:latest
     container_name: mg-erp-ledger
     restart: unless-stopped
     environment:
@@ -93,7 +93,7 @@ services:
 
   # Inventory Service
   inventory:
-    image: ghcr.io/khaaliid/mg-erp/mg-inventory:main-dffdae7
+    image: ghcr.io/khaaliid/mg-erp/mg-inventory:latest
     container_name: mg-erp-inventory
     restart: unless-stopped
     environment:
@@ -120,7 +120,7 @@ services:
 
   # POS Backend Service
   pos-backend:
-    image: ghcr.io/khaaliid/mg-erp/mg-pos:main-0530bc2
+    image: ghcr.io/khaaliid/mg-erp/mg-pos:latest
     container_name: mg-erp-pos-backend
     restart: unless-stopped
     environment:
@@ -150,7 +150,7 @@ services:
 
   # POS Frontend
   pos-frontend:
-    image: ghcr.io/khaaliid/mg-erp/mg-pos-frontend:main-74284ec
+    image: ghcr.io/khaaliid/mg-erp/mg-pos-frontend:latest
     container_name: mg-erp-pos-frontend
     restart: unless-stopped
     ports:
@@ -168,7 +168,7 @@ services:
 
   # Auth Frontend
   auth-frontend:
-    image: ghcr.io/khaaliid/mg-erp/mg-auth-frontend:main-bca9526
+    image: ghcr.io/khaaliid/mg-erp/mg-auth-frontend:latest
     container_name: mg-erp-auth-frontend
     restart: unless-stopped
     ports:
@@ -185,7 +185,7 @@ services:
       - mg-erp-network
 
   ledger-frontend:
-    image: ghcr.io/khaaliid/mg-erp/mg-ledger-frontend:main-6512c7f
+    image: ghcr.io/khaaliid/mg-erp/mg-ledger-frontend:latest
     container_name: mg-erp-ledger-frontend
     restart: unless-stopped
     ports:
@@ -202,7 +202,7 @@ services:
       - mg-erp-network
 
   inventory-frontend:
-    image: ghcr.io/khaaliid/mg-erp/mg-inventory-frontend:main-37e887b
+    image: ghcr.io/khaaliid/mg-erp/mg-inventory-frontend:latest
     container_name: mg-erp-inventory-frontend
     restart: unless-stopped
     ports:
@@ -219,7 +219,7 @@ services:
       - mg-erp-network
 
   portal-frontend:
-    image: mg-portal-frontend:0.0.1
+    image: ghcr.io/khaaliid/mg-erp/mg-portal-frontend:latest
     container_name: mg-erp-portal-frontend
     restart: unless-stopped
     ports:
