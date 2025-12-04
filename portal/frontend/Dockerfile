@@ -2,17 +2,13 @@ FROM node:20-alpine AS build
 WORKDIR /app
 COPY package*.json ./
 RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
-# Create .env with defaults if .env.docker is absent in CI
-RUN echo "Preparing env file" && touch .env
-COPY .env.docker .env
-RUN if [ ! -s .env ]; then \
-    echo "VITE_AUTH_BASE_URL=http://host.docker.internal:8004" >> .env && \
+# Generate .env defaults inside build (no external file required)
+RUN echo "VITE_AUTH_BASE_URL=http://host.docker.internal:8004" > .env && \
     echo "VITE_LEDGER_URL=http://localhost:3001" >> .env && \
     echo "VITE_INVENTORY_URL=http://localhost:3002" >> .env && \
     echo "VITE_POS_URL=http://localhost:3003" >> .env && \
     echo "VITE_AUTH_URL=http://localhost:3000" >> .env && \
-    echo "VITE_PORTAL_URL=http://localhost:3005" >> .env ; \
-  fi
+    echo "VITE_PORTAL_URL=http://localhost:3005" >> .env
 COPY . .
 RUN npm run build
 
