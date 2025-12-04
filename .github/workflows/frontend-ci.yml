@@ -94,12 +94,14 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set lowercase repo name
+        run: echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
       
       - name: Extract metadata for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}/mg-ledger-frontend
+          images: ghcr.io/${{ env.REPO_LC }}/mg-ledger-frontend
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -115,7 +117,7 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ steps.meta.outputs.tags }}
-            ghcr.io/${{ github.repository }}/mg-ledger-frontend:${{ env.IMAGE_TAG }}
+            ghcr.io/${{ env.REPO_LC }}/mg-ledger-frontend:${{ env.IMAGE_TAG }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -166,12 +168,14 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set lowercase repo name
+        run: echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
       
       - name: Extract metadata for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}/mg-inventory-frontend
+          images: ghcr.io/${{ env.REPO_LC }}/mg-inventory-frontend
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -187,7 +191,7 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ steps.meta.outputs.tags }}
-            ghcr.io/${{ github.repository }}/mg-inventory-frontend:${{ env.IMAGE_TAG }}
+            ghcr.io/${{ env.REPO_LC }}/mg-inventory-frontend:${{ env.IMAGE_TAG }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -238,12 +242,14 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set lowercase repo name
+        run: echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
       
       - name: Extract metadata for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}/mg-pos-frontend
+          images: ghcr.io/${{ env.REPO_LC }}/mg-pos-frontend
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -259,7 +265,7 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ steps.meta.outputs.tags }}
-            ghcr.io/${{ github.repository }}/mg-pos-frontend:${{ env.IMAGE_TAG }}
+            ghcr.io/${{ env.REPO_LC }}/mg-pos-frontend:${{ env.IMAGE_TAG }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -311,12 +317,14 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set lowercase repo name
+        run: echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
 
       - name: Extract metadata for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}/mg-portal-frontend
+          images: ghcr.io/${{ env.REPO_LC }}/mg-portal-frontend
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -332,7 +340,7 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ steps.meta.outputs.tags }}
-            ghcr.io/${{ github.repository }}/mg-portal-frontend:${{ env.IMAGE_TAG }}
+            ghcr.io/${{ env.REPO_LC }}/mg-portal-frontend:${{ env.IMAGE_TAG }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -388,12 +396,14 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set lowercase repo name
+        run: echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
 
       - name: Extract metadata for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}/mg-auth-frontend
+          images: ghcr.io/${{ env.REPO_LC }}/mg-auth-frontend
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -409,7 +419,7 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ steps.meta.outputs.tags }}
-            ghcr.io/${{ github.repository }}/mg-auth-frontend:${{ env.IMAGE_TAG }}
+            ghcr.io/${{ env.REPO_LC }}/mg-auth-frontend:${{ env.IMAGE_TAG }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
