@@ -94,6 +94,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Compute lowercase repo
+        id: repo_lc
+        shell: bash
+        run: |
+          REPO_LC="${GITHUB_REPOSITORY,,}"
+          echo "repo=${REPO_LC}" >> "$GITHUB_OUTPUT"
       - name: Set lowercase repo name
         run: echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
       
@@ -101,7 +107,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ env.REPO_LC }}/mg-ledger-frontend
+          images: ghcr.io/${{ steps.repo_lc.outputs.repo }}/mg-ledger-frontend
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -117,7 +123,7 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ steps.meta.outputs.tags }}
-            ghcr.io/${{ env.REPO_LC }}/mg-ledger-frontend:${{ env.IMAGE_TAG }}
+            ghcr.io/${{ steps.repo_lc.outputs.repo }}/mg-ledger-frontend:${{ env.IMAGE_TAG }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -168,6 +174,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Compute lowercase repo
+        id: repo_lc_inv
+        shell: bash
+        run: |
+          REPO_LC="${GITHUB_REPOSITORY,,}"
+          echo "repo=${REPO_LC}" >> "$GITHUB_OUTPUT"
       - name: Set lowercase repo name
         run: echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
       
@@ -175,7 +187,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ env.REPO_LC }}/mg-inventory-frontend
+          images: ghcr.io/${{ steps.repo_lc_inv.outputs.repo }}/mg-inventory-frontend
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -191,7 +203,7 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ steps.meta.outputs.tags }}
-            ghcr.io/${{ env.REPO_LC }}/mg-inventory-frontend:${{ env.IMAGE_TAG }}
+            ghcr.io/${{ steps.repo_lc_inv.outputs.repo }}/mg-inventory-frontend:${{ env.IMAGE_TAG }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -242,6 +254,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Compute lowercase repo
+        id: repo_lc_pos
+        shell: bash
+        run: |
+          REPO_LC="${GITHUB_REPOSITORY,,}"
+          echo "repo=${REPO_LC}" >> "$GITHUB_OUTPUT"
       - name: Set lowercase repo name
         run: echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
       
@@ -249,7 +267,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ env.REPO_LC }}/mg-pos-frontend
+          images: ghcr.io/${{ steps.repo_lc_pos.outputs.repo }}/mg-pos-frontend
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -265,7 +283,7 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ steps.meta.outputs.tags }}
-            ghcr.io/${{ env.REPO_LC }}/mg-pos-frontend:${{ env.IMAGE_TAG }}
+            ghcr.io/${{ steps.repo_lc_pos.outputs.repo }}/mg-pos-frontend:${{ env.IMAGE_TAG }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -317,6 +335,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Compute lowercase repo
+        id: repo_lc_portal
+        shell: bash
+        run: |
+          REPO_LC="${GITHUB_REPOSITORY,,}"
+          echo "repo=${REPO_LC}" >> "$GITHUB_OUTPUT"
       - name: Set lowercase repo name
         run: echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
 
@@ -324,7 +348,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ env.REPO_LC }}/mg-portal-frontend
+          images: ghcr.io/${{ steps.repo_lc_portal.outputs.repo }}/mg-portal-frontend
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -340,7 +364,7 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ steps.meta.outputs.tags }}
-            ghcr.io/${{ env.REPO_LC }}/mg-portal-frontend:${{ env.IMAGE_TAG }}
+            ghcr.io/${{ steps.repo_lc_portal.outputs.repo }}/mg-portal-frontend:${{ env.IMAGE_TAG }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -396,6 +420,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Compute lowercase repo
+        id: repo_lc_auth
+        shell: bash
+        run: |
+          REPO_LC="${GITHUB_REPOSITORY,,}"
+          echo "repo=${REPO_LC}" >> "$GITHUB_OUTPUT"
       - name: Set lowercase repo name
         run: echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
 
@@ -403,7 +433,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ env.REPO_LC }}/mg-auth-frontend
+          images: ghcr.io/${{ steps.repo_lc_auth.outputs.repo }}/mg-auth-frontend
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -419,7 +449,7 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ steps.meta.outputs.tags }}
-            ghcr.io/${{ env.REPO_LC }}/mg-auth-frontend:${{ env.IMAGE_TAG }}
+            ghcr.io/${{ steps.repo_lc_auth.outputs.repo }}/mg-auth-frontend:${{ env.IMAGE_TAG }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

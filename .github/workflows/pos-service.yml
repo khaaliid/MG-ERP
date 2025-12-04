@@ -138,18 +138,21 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Set lowercase repo and image name
+      - name: Compute lowercase repo/image
         if: steps.check_dockerfile.outputs.dockerfile_exists == 'true'
+        id: lower
+        shell: bash
         run: |
-          echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
-          echo "IMAGE_NAME_LC=${REPO_LC}/mg-pos" >> $GITHUB_ENV
+          REPO_LC="${GITHUB_REPOSITORY,,}"
+          echo "repo=${REPO_LC}" >> "$GITHUB_OUTPUT"
+          echo "image=${REPO_LC}/mg-pos" >> "$GITHUB_OUTPUT"
       
       - name: Extract metadata
         if: steps.check_dockerfile.outputs.dockerfile_exists == 'true'
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}
+          images: ${{ env.REGISTRY }}/${{ steps.lower.outputs.image }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -167,7 +170,7 @@ jobs:
           push: true
           tags: |
             ${{ steps.meta.outputs.tags }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}:${{ env.IMAGE_TAG }}
+            ${{ env.REGISTRY }}/${{ steps.lower.outputs.image }}:${{ env.IMAGE_TAG }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
