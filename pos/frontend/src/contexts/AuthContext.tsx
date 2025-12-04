@@ -5,6 +5,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { enhancedApiService, LoginRequest, User } from '../services/enhancedApiService';
+import apiService from '../services/apiService';
 
 interface AuthContextType {
   user: User | null;
@@ -68,7 +69,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const ssoToken = url.searchParams.get('sso_token');
       if (ssoToken) {
         console.log('[SSO] Received sso_token from URL, storing token');
-        enhancedApiService.setToken(ssoToken);
+        // Persist token where apiService reads it
+        localStorage.setItem('pos_auth_token', ssoToken);
+        // Reload token into apiService singleton
+        apiService.reloadToken();
+        // Clean URL
         url.searchParams.delete('sso_token');
         window.history.replaceState({}, document.title, url.toString());
       }
@@ -91,7 +96,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(currentUser);
         // Update localStorage with fresh user data
         localStorage.setItem('pos_current_user', JSON.stringify(currentUser));
-        const token = enhancedApiService.getToken?.();
+        const token = localStorage.getItem('pos_auth_token');
         if (token) {
           scheduleExpiryLogout(token);
         }
