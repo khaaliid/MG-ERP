@@ -3,10 +3,12 @@ import { authService, User } from '../services/apiService';
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
+  token: string | null;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  isAuthenticated: boolean;
   isLoading: boolean;
+  ssoCaptureInProgress: boolean;
+  applySsoToken: (token: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,13 +27,17 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [ssoCaptureInProgress, setSsoCaptureInProgress] = useState(false);
   const expiryTimerRef = useRef<number | null>(null);
 
   const logout = () => {
     authService.logout();
     setUser(null);
-    localStorage.removeItem('token');
+    setToken(null);
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
     if (expiryTimerRef.current) {
       window.clearTimeout(expiryTimerRef.current);
       expiryTimerRef.current = null;
@@ -65,48 +71,92 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     const initAuth = async () => {
+      console.log('[AuthContext] initAuth href:', window.location.href);
       const url = new URL(window.location.href);
       const ssoToken = url.searchParams.get('sso_token');
       if (ssoToken) {
-        console.log('[SSO] Received sso_token from URL, storing token');
-        localStorage.setItem('token', ssoToken);
+        console.log('[AuthContext] sso_token detected, deferring redirects');
+        setSsoCaptureInProgress(true);
+        localStorage.setItem('auth_token', ssoToken);
+        setToken(ssoToken);
         url.searchParams.delete('sso_token');
         window.history.replaceState({}, document.title, url.toString());
       }
+      
+      const savedToken = localStorage.getItem('auth_token');
+      const savedUser = localStorage.getItem('auth_user');
 
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          const profile = await authService.getProfile();
-          setUser(profile);
-          scheduleExpiryLogout(token);
-        } catch (error) {
-          console.warn('Token validation failed; clearing stored token');
-          localStorage.removeItem('token');
-          setUser(null);
+      const validate = async () => {
+        const toValidate = savedToken || token;
+        if (toValidate) {
+          try {
+            // authService.getProfile() uses stored token; ensure localStorage has it
+            const profile = await authService.getProfile();
+            setToken(toValidate);
+            setUser(profile);
+            localStorage.setItem('auth_user', JSON.stringify(profile));
+            scheduleExpiryLogout(toValidate);
+          } catch (e) {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('auth_user');
+            setToken(null);
+            setUser(null);
+          }
         }
-      }
-      setIsLoading(false);
+        setIsLoading(false);
+        setSsoCaptureInProgress(false);
+      };
+      validate();
     };
 
     initAuth();
   }, []);
 
-  const login = async (email: string, password: string) => {
-    const response = await authService.login({ email, password });
-    localStorage.setItem('token', response.access_token);
-    const profile = await authService.getProfile();
-    setUser(profile);
+  const login = async (email: string, password: string): Promise<boolean> => {
+    try {
+      const response = await authService.login({ email, password });
+      localStorage.setItem('auth_token', response.access_token);
+      const profile = await authService.getProfile();
+      setToken(response.access_token);
+      setUser(profile);
+      localStorage.setItem('auth_user', JSON.stringify(profile));
+      scheduleExpiryLogout(response.access_token);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  const applySsoToken = async (incomingToken: string): Promise<void> => {
+    try {
+      setSsoCaptureInProgress(true);
+      localStorage.setItem('auth_token', incomingToken);
+      setToken(incomingToken);
+      const profile = await authService.getProfile();
+      setUser(profile);
+      localStorage.setItem('auth_user', JSON.stringify(profile));
+      scheduleExpiryLogout(incomingToken);
+    } catch (e) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
+      setToken(null);
+      setUser(null);
+      throw e;
+    } finally {
+      setSsoCaptureInProgress(false);
+    }
   };
 
   
 
-  const value = {
+  const value: AuthContextType = {
     user,
+    token,
     login,
     logout,
-    isAuthenticated: !!user,
     isLoading,
+    ssoCaptureInProgress,
+    applySsoToken,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Login: React.FC = () => {
@@ -7,8 +7,31 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, applySsoToken } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Capture SSO token from /login?sso_token=... and apply it
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const ssoToken = params.get('sso_token');
+    if (ssoToken) {
+      const stripUrl = `${location.pathname}`;
+      (async () => {
+        setIsLoading(true);
+        try {
+          await applySsoToken(ssoToken);
+          // Strip the query param from URL
+          window.history.replaceState({}, document.title, stripUrl);
+          navigate('/dashboard');
+        } catch (e) {
+          // fall back to normal login view
+        } finally {
+          setIsLoading(false);
+        }
+      })();
+    }
+  }, [location.search]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

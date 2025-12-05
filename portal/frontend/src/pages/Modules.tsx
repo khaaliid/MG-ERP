@@ -2,7 +2,7 @@ import React from 'react'
 import { useAuth } from '../contexts/AuthContext'
 
 const modules = [
-  { key: 'auth', name: 'Authentication', icon: '🔐', url: import.meta.env.VITE_MODULE_AUTH_URL || 'http://localhost:3000' },
+  { key: 'auth', name: 'Authentication', icon: '🔐', url: import.meta.env.VITE_MODULE_AUTH_URL || 'http://localhost:3000/login' },
   { key: 'ledger', name: 'Ledger', icon: '📒', url: import.meta.env.VITE_MODULE_LEDGER_URL || 'http://localhost:3001' },
   { key: 'inventory', name: 'Inventory', icon: '📦', url: import.meta.env.VITE_MODULE_INVENTORY_URL || 'http://localhost:3002' },
   { key: 'pos', name: 'POS', icon: '🛒', url: import.meta.env.VITE_MODULE_POS_URL || 'http://localhost:3003' },

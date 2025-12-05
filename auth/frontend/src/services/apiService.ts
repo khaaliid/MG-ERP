@@ -11,7 +11,13 @@ const api = axios.create({
 
 // Add token to requests if available
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+  console.log('[auth/api] Request:', {
+    url: config?.url,
+    method: config?.method,
+    hasToken: !!token,
+    baseURL: API_BASE_URL,
+  });
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -22,9 +28,19 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error: AxiosError) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status;
+    const url = (error.config as any)?.url;
+    console.error('[auth/api] Response error:', {
+      status,
+      url,
+      data: error.response?.data,
+    });
+    if (status === 401) {
+      console.warn('[auth/api] 401 encountered; NOT redirecting (debug mode).');
+      // Temporarily disable redirect to inspect SSO behavior
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      localStorage.removeItem('auth_token');
+      // window.location.href = '/login';
     }
     return Promise.reject(error);
   }
@@ -56,11 +72,13 @@ export interface User {
 
 export const authService = {
   async login(credentials: LoginRequest): Promise<LoginResponse> {
+    console.log('[auth/api] login called with:', { email: credentials.email });
     const response = await api.post<LoginResponse>('/auth/login', credentials);
     return response.data;
   },
 
   async getProfile(): Promise<User> {
+    console.log('[auth/api] getProfile called');
     const response = await api.get<User>('/auth/profile');
     return response.data;
   },
@@ -91,7 +109,9 @@ export const authService = {
   },
 
   logout() {
+    console.log('[auth/api] logout called');
     localStorage.removeItem('token');
+    localStorage.removeItem('auth_token');
   },
 };
 
