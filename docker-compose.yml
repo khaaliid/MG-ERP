@@ -39,7 +39,7 @@ services:
 
   # Auth Service
   auth:
-    image: ghcr.io/khaaliid/mg-erp/mg-auth:latest
+    image: mg-auth:latest
     container_name: mg-erp-auth
     restart: unless-stopped
     environment:
@@ -238,10 +238,10 @@ services:
 volumes:
   mg-erp-pgdata:
     external: true
-    name: db_mg-erp-pgdata
+    name: mg-erp_mg-erp-pgdata
   db-data:
     external: true
-    name: db_db-data
+    name: mg-erp_db-data
 
 networks:
   mg-erp-network:

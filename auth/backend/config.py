@@ -43,6 +43,12 @@ class AuthSettings(BaseSettings):
     # Application Settings
     APP_NAME: str = "MG-ERP Authentication Service"
     DEBUG: bool = os.getenv("DEBUG", "true").lower() == "true"
+
+    # Default admin bootstrap
+    ENABLE_DEFAULT_ADMIN: bool = os.getenv("ENABLE_DEFAULT_ADMIN", "true").lower() == "true"
+    DEFAULT_ADMIN_EMAIL: str = os.getenv("DEFAULT_ADMIN_EMAIL", "admin@mgdonlinestore.com")
+    DEFAULT_ADMIN_NAME: str = os.getenv("DEFAULT_ADMIN_NAME", "Administrator")
+    DEFAULT_ADMIN_PASSWORD: str = os.getenv("DEFAULT_ADMIN_PASSWORD", "admin12345")
     
     # CORS Settings
     CORS_ORIGINS: list = [

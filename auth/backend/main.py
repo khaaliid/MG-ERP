@@ -35,6 +35,49 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}")
         raise
+
+    # Bootstrap default admin on first run
+    try:
+        from .database import create_session
+        from .service import AuthService
+        from .schemas import UserCreate, UserRoleEnum
+        from .models import User
+    except ImportError:
+        from database import create_session
+        from service import AuthService
+        from schemas import UserCreate, UserRoleEnum
+        from models import User
+
+    if getattr(auth_settings, 'ENABLE_DEFAULT_ADMIN', True):
+        try:
+            async with await create_session() as session:
+                # Check if any superuser/admin exists
+                from sqlalchemy import select
+                result = await session.execute(select(User).where(User.is_superuser == True))
+                existing_admin = result.scalar_one_or_none()
+                if not existing_admin:
+                    logger.info("No admin found; creating default admin user")
+                    svc = AuthService(session)
+                    # Build minimal admin user data
+                    username = auth_settings.DEFAULT_ADMIN_EMAIL.split('@')[0]
+                    admin_data = UserCreate(
+                        username=username,
+                        email=auth_settings.DEFAULT_ADMIN_EMAIL,
+                        full_name=auth_settings.DEFAULT_ADMIN_NAME,
+                        password=auth_settings.DEFAULT_ADMIN_PASSWORD,
+                        confirm_password=auth_settings.DEFAULT_ADMIN_PASSWORD,
+                        role=UserRoleEnum.ADMIN,
+                    )
+                    user = await svc.create_user(admin_data, created_by="system")
+                    # Elevate privileges
+                    user.is_superuser = True
+                    user.is_verified = True
+                    await session.commit()
+                    logger.info(f"Default admin created: {user.email}")
+                else:
+                    logger.info("Admin user already exists; skipping bootstrap")
+        except Exception as e:
+            logger.error(f"Failed to bootstrap default admin: {e}")
     
     logger.info("Authentication service is ready")
     
