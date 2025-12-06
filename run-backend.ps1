@@ -27,6 +27,7 @@ function Test-FileExists {
 $RootDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ModuleDir = Join-Path $RootDir $ModuleName
 $BackendDir = Join-Path $ModuleDir "backend"
+$ServicesEnv = Join-Path $RootDir "services.env"
 
 Write-Host "Starting MG-ERP Backend: $ModuleName" -ForegroundColor Green
 Write-Host "Root Directory: $RootDir" -ForegroundColor Cyan
@@ -79,6 +80,20 @@ if (-not (Test-FileExists $VenvPythonExe)) {
 }
 
 Write-Host "`nAll prerequisites validated successfully!" -ForegroundColor Green
+
+# Load common services.env if present
+if (Test-Path $ServicesEnv) {
+    Write-Host "Loading common service variables from services.env" -ForegroundColor Cyan
+    Get-Content $ServicesEnv | ForEach-Object {
+        if ($_ -match '^[#\s]') { return }
+        $parts = $_.Split('=',2)
+        if ($parts.Length -eq 2) {
+            $name = $parts[0].Trim()
+            $value = $parts[1].Trim()
+            [System.Environment]::SetEnvironmentVariable($name, $value)
+        }
+    }
+}
 
 # Start backend service
 try {

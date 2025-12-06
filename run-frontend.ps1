@@ -26,6 +26,7 @@ function Test-FileExists {
 $RootDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ModuleDir = Join-Path $RootDir $ModuleName
 $FrontendDir = Join-Path $ModuleDir "frontend"
+$ServicesEnv = Join-Path $RootDir "services.env"
 
 Write-Host "Starting MG-ERP Frontend: $ModuleName" -ForegroundColor Green
 Write-Host "Root Directory: $RootDir" -ForegroundColor Cyan
@@ -67,6 +68,27 @@ if (-not (Test-FileExists $PackageJsonPath)) {
 }
 
 Write-Host "`nAll prerequisites validated successfully!" -ForegroundColor Green
+
+# Load common services.env into VITE_* environment variables if present
+if (Test-Path $ServicesEnv) {
+    Write-Host "Loading common service variables from services.env" -ForegroundColor Cyan
+    Get-Content $ServicesEnv | ForEach-Object {
+        if ($_ -match '^[#\s]') { return }
+        $parts = $_.Split('=',2)
+        if ($parts.Length -eq 2) {
+            $name = $parts[0].Trim()
+            $value = $parts[1].Trim()
+            # Map backend service URLs to VITE_ variables when appropriate
+            switch ($name) {
+                'AUTH_SERVICE_URL'      { [System.Environment]::SetEnvironmentVariable('VITE_AUTH_BASE_URL', $value) }
+                'INVENTORY_SERVICE_URL' { [System.Environment]::SetEnvironmentVariable('VITE_INVENTORY_BASE_URL', $value) }
+                'LEDGER_SERVICE_URL'    { [System.Environment]::SetEnvironmentVariable('VITE_LEDGER_BASE_URL', $value) }
+                'POS_SERVICE_URL'       { [System.Environment]::SetEnvironmentVariable('VITE_POS_BASE_URL', $value) }
+                default                 { [System.Environment]::SetEnvironmentVariable($name, $value) }
+            }
+        }
+    }
+}
 
 # Start frontend service
 try {

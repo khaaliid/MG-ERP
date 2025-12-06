@@ -13,6 +13,8 @@ services:
       - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mguser -d mgerp"]
+      env_file:
+        - ./services.env
       interval: 10s
       timeout: 5s
       retries: 5
@@ -69,9 +71,11 @@ services:
     image: ghcr.io/khaaliid/mg-erp/mg-ledger:latest
     container_name: mg-erp-ledger
     restart: unless-stopped
+    env_file:
+      - ./services.env
     environment:
       DATABASE_URL: postgresql+asyncpg://mguser:mgpassword@postgres:5432/mgerp
-      AUTH_SERVICE_URL: http://auth:8004
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
       LOG_LEVEL: INFO
       ENVIRONMENT: production
       DEBUG: "false"
@@ -96,9 +100,11 @@ services:
     image: ghcr.io/khaaliid/mg-erp/mg-inventory:latest
     container_name: mg-erp-inventory
     restart: unless-stopped
+    env_file:
+      - ./services.env
     environment:
       DATABASE_URL: postgresql+asyncpg://mguser:mgpassword@postgres:5432/mgerp
-      AUTH_SERVICE_URL: http://auth:8004
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
       LOG_LEVEL: INFO
       ENVIRONMENT: production
       DEBUG: "false"
@@ -123,10 +129,12 @@ services:
     image: ghcr.io/khaaliid/mg-erp/mg-pos:latest
     container_name: mg-erp-pos-backend
     restart: unless-stopped
+    env_file:
+      - ./services.env
     environment:
-      AUTH_SERVICE_URL: http://auth:8004
-      INVENTORY_SERVICE_URL: http://inventory:8002
-      LEDGER_SERVICE_URL: http://ledger:8000
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
+      INVENTORY_SERVICE_URL: ${INVENTORY_SERVICE_URL}
+      LEDGER_SERVICE_URL: ${LEDGER_SERVICE_URL}
       LOG_LEVEL: INFO
       ENVIRONMENT: production
       DEBUG: "false"
