@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useI18n } from '../i18n/I18nContext';
+import LanguageSwitcher from './LanguageSwitcher';
 
 interface HeaderProps {
   currentPage?: string;
@@ -9,6 +11,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ currentPage = 'transactions', currentReport }) => {
   const [showReportsMenu, setShowReportsMenu] = useState(false);
   const { user, logout } = useAuth();
+  const { t } = useI18n();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -31,8 +34,8 @@ const Header: React.FC<HeaderProps> = ({ currentPage = 'transactions', currentRe
 
   const reports = [
     {
-      name: 'Trial Balance',
-      description: 'Account balances verification',
+      name: t('nav_trial_balance'),
+      description: t('report_trial_balance_desc'),
       href: '/reports/trial-balance',
       id: 'trial-balance',
       icon: (
@@ -42,8 +45,8 @@ const Header: React.FC<HeaderProps> = ({ currentPage = 'transactions', currentRe
       )
     },
     {
-      name: 'Balance Sheet',
-      description: 'Financial position statement',
+      name: t('nav_balance_sheet'),
+      description: t('report_balance_sheet_desc'),
       href: '/reports/balance-sheet',
       id: 'balance-sheet',
       icon: (
@@ -53,8 +56,8 @@ const Header: React.FC<HeaderProps> = ({ currentPage = 'transactions', currentRe
       )
     },
     {
-      name: 'Income Statement',
-      description: 'Profit & Loss report',
+      name: t('nav_income_statement'),
+      description: t('report_income_statement_desc'),
       href: '/reports/income-statement',
       id: 'income-statement',
       icon: (
@@ -64,8 +67,8 @@ const Header: React.FC<HeaderProps> = ({ currentPage = 'transactions', currentRe
       )
     },
     {
-      name: 'General Ledger',
-      description: 'Detailed transaction history',
+      name: t('nav_general_ledger'),
+      description: t('report_general_ledger_desc'),
       href: '/reports/general-ledger',
       id: 'general-ledger',
       icon: (
@@ -75,8 +78,8 @@ const Header: React.FC<HeaderProps> = ({ currentPage = 'transactions', currentRe
       )
     },
     {
-      name: 'Cash Flow',
-      description: 'Cash movement tracking',
+      name: t('nav_cash_flow'),
+      description: t('report_cash_flow_desc'),
       href: '/reports/cash-flow',
       id: 'cash-flow',
       icon: (
@@ -86,8 +89,8 @@ const Header: React.FC<HeaderProps> = ({ currentPage = 'transactions', currentRe
       )
     },
     {
-      name: 'Dashboard',
-      description: 'Financial overview',
+      name: t('nav_dashboard'),
+      description: t('report_dashboard_desc'),
       href: '/reports/dashboard',
       id: 'dashboard',
       icon: (
@@ -97,8 +100,8 @@ const Header: React.FC<HeaderProps> = ({ currentPage = 'transactions', currentRe
       )
     },
     {
-      name: 'Aging Report',
-      description: 'Account aging analysis',
+      name: t('nav_aging_report'),
+      description: t('report_aging_desc'),
       href: '/reports/aging',
       id: 'aging',
       icon: (
@@ -111,7 +114,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage = 'transactions', currentRe
 
   const navigationItems = [
     {
-      name: 'Transactions',
+      name: t('nav_transactions'),
       href: '/',
       active: currentPage === 'transactions',
       icon: (
@@ -121,7 +124,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage = 'transactions', currentRe
       )
     },
     {
-      name: 'Accounts',
+      name: t('nav_accounts'),
       href: '/accounts',
       active: currentPage === 'accounts',
       icon: (
@@ -146,7 +149,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage = 'transactions', currentRe
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
                 </svg>
               </div>
-              <h1 className="text-xl font-semibold text-gray-900">MG-ERP Ledger</h1>
+              <h1 className="text-xl font-semibold text-gray-900">{t('app_title')}</h1>
             </div>
 
             {/* Navigation Items */}
@@ -180,7 +183,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage = 'transactions', currentRe
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  <span>Reports</span>
+                  <span>{t('nav_reports')}</span>
                   <svg 
                     className={`h-4 w-4 transition-transform duration-300 ${showReportsMenu ? 'rotate-180' : ''}`} 
                     fill="none" 
@@ -196,7 +199,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage = 'transactions', currentRe
                   <div className="absolute top-full left-0 mt-1 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 animate-in slide-in-from-top-2 duration-300">
                     <div className="py-2">
                       <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
-                        Financial Reports
+                        {t('financial_reports')}
                       </div>
                       {reports.map((report) => (
                         <a
@@ -237,16 +240,17 @@ const Header: React.FC<HeaderProps> = ({ currentPage = 'transactions', currentRe
             </nav>
           </div>
 
-          {/* Right side: User Info + Logout */}
+          {/* Right side: User Info + Language + Logout */}
           <div className="flex items-center space-x-4">
             <span className="text-sm text-gray-600">
-              Welcome, <span className="font-medium text-gray-900">{user?.username}</span>
+              {t('welcome_user')}, <span className="font-medium text-gray-900">{user?.username}</span>
             </span>
+            <LanguageSwitcher />
             <button
               onClick={logout}
               className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition duration-200 text-sm font-medium"
             >
-              Logout
+              {t('logout')}
             </button>
           </div>
         </div>

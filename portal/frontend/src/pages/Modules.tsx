@@ -1,11 +1,19 @@
 import React from 'react'
 import { useAuth } from '../contexts/AuthContext'
 
+const getModuleUrl = (key: string, fallback: string) => {
+  const config = (window as any).APP_CONFIG;
+  if (config && config[`MODULE_${key.toUpperCase()}_URL`]) {
+    return config[`MODULE_${key.toUpperCase()}_URL`];
+  }
+  return (import.meta.env as any)[`VITE_MODULE_${key.toUpperCase()}_URL`] || fallback;
+};
+
 const modules = [
-  { key: 'auth', name: 'Authentication', icon: '🔐', url: import.meta.env.VITE_MODULE_AUTH_URL || 'http://localhost:3000/login' },
-  { key: 'ledger', name: 'Ledger', icon: '📒', url: import.meta.env.VITE_MODULE_LEDGER_URL || 'http://localhost:3001' },
-  { key: 'inventory', name: 'Inventory', icon: '📦', url: import.meta.env.VITE_MODULE_INVENTORY_URL || 'http://localhost:3002' },
-  { key: 'pos', name: 'POS', icon: '🛒', url: import.meta.env.VITE_MODULE_POS_URL || 'http://localhost:3003' },
+  { key: 'auth', name: 'Authentication', icon: '🔐', url: getModuleUrl('auth', 'http://localhost:3000') + '/login' },
+  { key: 'ledger', name: 'Ledger', icon: '📒', url: getModuleUrl('ledger', 'http://localhost:3001') },
+  { key: 'inventory', name: 'Inventory', icon: '📦', url: getModuleUrl('inventory', 'http://localhost:3002') },
+  { key: 'pos', name: 'POS', icon: '🛒', url: getModuleUrl('pos', 'http://localhost:3003') },
 ]
 
 const Modules: React.FC = () => {

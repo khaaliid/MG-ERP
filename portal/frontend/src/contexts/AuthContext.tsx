@@ -24,12 +24,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  // Service base URL from runtime config or fallback to build-time env
+  const baseUrl = (window as any).APP_CONFIG?.AUTH_BASE_URL || import.meta.env.VITE_AUTH_BASE_URL || 'http://localhost:8004';
+
   useEffect(() => {
     const savedToken = localStorage.getItem('auth_token')
     if (!savedToken) { setIsLoading(false); return }
     ;(async () => {
       try {
-        const resp = await fetch(`${import.meta.env.VITE_AUTH_BASE_URL}/api/v1/auth/profile`, {
+        const resp = await fetch(`${baseUrl}/api/v1/auth/profile`, {
           headers: { Authorization: `Bearer ${savedToken}` }
         })
         if (resp.ok) {
@@ -45,18 +48,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsLoading(false)
       }
     })()
-  }, [])
+  }, [baseUrl])
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true)
     try {
-      const resp = await fetch(`${import.meta.env.VITE_AUTH_BASE_URL}/api/v1/auth/login`, {
+      const resp = await fetch(`${baseUrl}/api/v1/auth/login`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       })
       if (!resp.ok) return false
       const tokens = await resp.json() as { access_token: string }
-      const prof = await fetch(`${import.meta.env.VITE_AUTH_BASE_URL}/api/v1/auth/profile`, {
+      const prof = await fetch(`${baseUrl}/api/v1/auth/profile`, {
         headers: { Authorization: `Bearer ${tokens.access_token}` }
       })
       if (!prof.ok) return false

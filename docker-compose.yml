@@ -13,8 +13,6 @@ services:
       - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mguser -d mgerp"]
-      env_file:
-        - ./services.env
       interval: 10s
       timeout: 5s
       retries: 5
@@ -44,6 +42,8 @@ services:
     image: mg-auth:latest
     container_name: mg-erp-auth
     restart: unless-stopped
+    env_file:
+      - ./services.env
     environment:
       DATABASE_URL: postgresql+asyncpg://mguser:mgpassword@postgres:5432/mgerp
       SECRET_KEY: ${JWT_SECRET_KEY:-your-secret-key-change-in-production}
@@ -75,7 +75,7 @@ services:
       - ./services.env
     environment:
       DATABASE_URL: postgresql+asyncpg://mguser:mgpassword@postgres:5432/mgerp
-      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://auth:8004}
       LOG_LEVEL: INFO
       ENVIRONMENT: production
       DEBUG: "false"
@@ -104,7 +104,7 @@ services:
       - ./services.env
     environment:
       DATABASE_URL: postgresql+asyncpg://mguser:mgpassword@postgres:5432/mgerp
-      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://auth:8004}
       LOG_LEVEL: INFO
       ENVIRONMENT: production
       DEBUG: "false"
@@ -132,9 +132,9 @@ services:
     env_file:
       - ./services.env
     environment:
-      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
-      INVENTORY_SERVICE_URL: ${INVENTORY_SERVICE_URL}
-      LEDGER_SERVICE_URL: ${LEDGER_SERVICE_URL}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://auth:8004}
+      INVENTORY_SERVICE_URL: ${INVENTORY_SERVICE_URL:-http://inventory:8002}
+      LEDGER_SERVICE_URL: ${LEDGER_SERVICE_URL:-http://ledger:8000}
       LOG_LEVEL: INFO
       ENVIRONMENT: production
       DEBUG: "false"
@@ -161,6 +161,8 @@ services:
     image: ghcr.io/khaaliid/mg-erp/mg-pos-frontend:latest
     container_name: mg-erp-pos-frontend
     restart: unless-stopped
+    env_file:
+      - ./services.env
     ports:
       - "3003:80"
     depends_on:
@@ -179,6 +181,8 @@ services:
     image: ghcr.io/khaaliid/mg-erp/mg-auth-frontend:latest
     container_name: mg-erp-auth-frontend
     restart: unless-stopped
+    env_file:
+      - ./services.env
     ports:
       - "3000:80"
     depends_on:
@@ -193,9 +197,14 @@ services:
       - mg-erp-network
 
   ledger-frontend:
-    image: ghcr.io/khaaliid/mg-erp/mg-ledger-frontend:latest
+    image: mg-ledger-frontend:latest
     container_name: mg-erp-ledger-frontend
     restart: unless-stopped
+    environment:
+      AUTH_SERVICE_URL: http://localhost:8004
+      INVENTORY_SERVICE_URL: http://localhost:8002
+      LEDGER_SERVICE_URL: http://localhost:8000
+      POS_SERVICE_URL: http://localhost:8001
     ports:
       - "3001:80"
     depends_on:
@@ -213,6 +222,8 @@ services:
     image: ghcr.io/khaaliid/mg-erp/mg-inventory-frontend:latest
     container_name: mg-erp-inventory-frontend
     restart: unless-stopped
+    env_file:
+      - ./services.env
     ports:
       - "3002:80"
     depends_on:
@@ -227,9 +238,18 @@ services:
       - mg-erp-network
 
   portal-frontend:
-    image: ghcr.io/khaaliid/mg-erp/mg-portal-frontend:latest
+    image: mg-portal-frontend:latest
     container_name: mg-erp-portal-frontend
     restart: unless-stopped
+    env_file:
+      - ./services.env
+    environment:
+      AUTH_SERVICE_URL: http://localhost:8004
+      LEDGER_FRONTEND_URL: http://localhost:3001
+      INVENTORY_FRONTEND_URL: http://localhost:3002
+      POS_FRONTEND_URL: http://localhost:3003
+      AUTH_FRONTEND_URL: http://localhost:3000
+      PORTAL_FRONTEND_URL: http://localhost:3005
     ports:
       - "3005:80"
     depends_on:

@@ -30,6 +30,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const expiryTimerRef = useRef<number | null>(null);
+  
+  // Service base URL from runtime config or fallback to build-time env
+  const baseUrl = (window as any).APP_CONFIG?.AUTH_BASE_URL || import.meta.env.VITE_AUTH_BASE_URL || 'http://localhost:8004';
 
   const logout = () => {
     setUser(null);
@@ -69,34 +72,37 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Check for existing token on app start
   useEffect(() => {
-    const url = new URL(window.location.href);
-    const ssoToken = url.searchParams.get('sso_token');
-    if (ssoToken) {
-      console.log('[SSO] Received sso_token from URL, storing token');
-      localStorage.setItem('auth_token', ssoToken);
-      setToken(ssoToken);
-      url.searchParams.delete('sso_token');
-      window.history.replaceState({}, document.title, url.toString());
-    }
-
-    const savedToken = localStorage.getItem('auth_token');
-    const savedUser = localStorage.getItem('auth_user');
-
-    console.log('Checking auth state:', { savedToken, savedUser });
-
     const validate = async () => {
-      const toValidate = savedToken || token;
-      if (toValidate) {
+      // Check for SSO token in URL
+      const url = new URL(window.location.href);
+      const ssoToken = url.searchParams.get('sso_token');
+      
+      let tokenToValidate: string | null = null;
+      
+      if (ssoToken) {
+        console.log('[SSO] Received sso_token from URL, storing token');
+        localStorage.setItem('auth_token', ssoToken);
+        tokenToValidate = ssoToken;
+        url.searchParams.delete('sso_token');
+        window.history.replaceState({}, document.title, url.toString());
+      } else {
+        tokenToValidate = localStorage.getItem('auth_token');
+      }
+
+      console.log('Checking auth state:', { tokenToValidate, hasToken: !!tokenToValidate });
+
+      if (tokenToValidate) {
         try {
-          const resp = await fetch('http://localhost:8004/api/v1/auth/profile', {
-            headers: { Authorization: `Bearer ${toValidate}` },
+          const resp = await fetch(`${baseUrl}/api/v1/auth/profile`, {
+            headers: { Authorization: `Bearer ${tokenToValidate}` },
           });
           if (resp.ok) {
             const userObj = await resp.json();
-            setToken(toValidate);
+            setToken(tokenToValidate);
             setUser(userObj);
             localStorage.setItem('auth_user', JSON.stringify(userObj));
-            scheduleExpiryLogout(toValidate);
+            scheduleExpiryLogout(tokenToValidate);
+            console.log('[SSO] Successfully validated and logged in user:', userObj.username);
           } else {
             console.warn('Token invalid; clearing stored auth');
             localStorage.removeItem('auth_token');
@@ -113,7 +119,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsLoading(false);
     };
     validate();
-  }, []);
+  }, [baseUrl]);
 
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
@@ -129,7 +135,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       };
 
       console.log('📡 Sending login request to auth service...');
-      const response = await fetch('http://localhost:8004/api/v1/auth/login', {
+      const response = await fetch(`${baseUrl}/api/v1/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -152,7 +158,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       // Get user profile with the token
       console.log('👤 Fetching user profile...');
-      const profileResponse = await fetch('http://localhost:8004/api/v1/auth/profile', {
+      const profileResponse = await fetch(`${baseUrl}/api/v1/auth/profile`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${tokenData.access_token}`,
