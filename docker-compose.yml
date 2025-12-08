@@ -39,7 +39,7 @@ services:
 
   # Auth Service
   auth:
-    image: mg-auth:latest
+    image: ghcr.io/khaaliid/mg-erp/mg-auth:latest
     container_name: mg-erp-auth
     restart: unless-stopped
     env_file:
@@ -197,7 +197,7 @@ services:
       - mg-erp-network
 
   ledger-frontend:
-    image: mg-ledger-frontend:latest
+    image: ghcr.io/khaaliid/mg-erp/mg-ledger-frontend:latest
     container_name: mg-erp-ledger-frontend
     restart: unless-stopped
     environment:
@@ -238,7 +238,7 @@ services:
       - mg-erp-network
 
   portal-frontend:
-    image: mg-portal-frontend:latest
+    image: ghcr.io/khaaliid/mg-erp/mg-portal-frontend:latest
     container_name: mg-erp-portal-frontend
     restart: unless-stopped
     env_file:

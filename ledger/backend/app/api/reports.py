@@ -173,7 +173,7 @@ async def get_general_ledger(
 ):
     """Generate General Ledger report."""
     logger.info(f"[REPORT] General Ledger requested by user: {current_user.get('username')} for account {account_id or 'ALL'}")
-    logger.info(f"[DEBUG] User details: is_superuser={current_user.is_superuser}, role={current_user.role}, permissions={current_user.permissions}")
+    logger.info(f"[DEBUG] User details: is_superuser={current_user.get('is_superuser')}, role={current_user.get('role')}, permissions={current_user.get('permissions')}")
     
     try:
         # Parse dates
