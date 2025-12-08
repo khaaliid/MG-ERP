@@ -266,10 +266,12 @@ services:
 volumes:
   mg-erp-pgdata:
     external: true
-    name: mg-erp_mg-erp-pgdata
+    # name: mg-erp_mg-erp-pgdata
+    name: db_mg-erp-pgdata
   db-data:
     external: true
-    name: mg-erp_db-data
+    # name: mg-erp_db-data
+    name: db_db-data
 
 networks:
   mg-erp-network:
