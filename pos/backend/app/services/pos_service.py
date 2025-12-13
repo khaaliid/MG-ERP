@@ -136,27 +136,55 @@ class StatelessPOSService:
     ) -> Dict[str, Any]:
         """
         Get sales history from ledger service.
-        No local storage - pure proxy to ledger service.
+        Retrieves POS transactions from the ledger.
         """
         try:
-            # In a pure stateless system, sales history comes from the ledger
-            # Query ledger service for sales transactions
-            filters = {}
-            if start_date:
-                filters['start_date'] = start_date
-            if end_date:
-                filters['end_date'] = end_date
-                
-            # This would call the ledger service to get sales transactions
-            # For now, return empty result as ledger service integration is pending
+            # Query ledger service for POS sales transactions
+            ledger_response = await erp_service.get_sales_transactions(
+                start_date=start_date,
+                end_date=end_date,
+                page=page,
+                limit=limit,
+                auth_token=auth_token
+            )
+            
+            # Transform ledger transactions to sales format
+            sales = []
+            for transaction in ledger_response.get('data', []):
+                # Extract sale information from ledger transaction
+                metadata = transaction.get('metadata', {})
+                sale = {
+                    'id': transaction.get('id'),
+                    'sale_number': transaction.get('reference'),
+                    'total_amount': sum(
+                        line.get('amount', 0) 
+                        for line in transaction.get('lines', []) 
+                        if line.get('type') == 'debit'
+                    ),
+                    'payment_method': metadata.get('payment_method', 'cash'),
+                    'customer_name': metadata.get('customer_name'),
+                    'items': [],  # Items not stored in ledger summary
+                    'subtotal': metadata.get('subtotal', 0),
+                    'tax_amount': metadata.get('tax_amount', 0),
+                    'discount_amount': metadata.get('discount_amount', 0),
+                    'created_at': transaction.get('created_at'),
+                    'description': transaction.get('description'),
+                    'cashier': transaction.get('created_by'),
+                    'status': transaction.get('status', 'completed')
+                }
+                sales.append(sale)
+            
             return {
-                'data': [],  # Would come from ledger service sales transactions
-                'total': 0,
+                'data': sales,
+                'total': ledger_response.get('total', 0),
                 'page': page,
                 'limit': limit,
-                'filters': filters,
-                'message': 'Sales history retrieved from ledger service'
+                'filters': {
+                    'start_date': start_date,
+                    'end_date': end_date
+                }
             }
+            
         except Exception as e:
             logger.error(f"Failed to get sales history: {e}")
             raise

@@ -124,5 +124,94 @@ class ERPIntegrationService:
         except Exception as e:
             logger.error("LEDGER_POST_EXCEPTION sale_number=%s error_type=%s error=%s", sale_number, type(e).__name__, str(e))
             raise RuntimeError(f"Ledger service error: {str(e)}")
+    
+    async def get_sales_transactions(
+        self,
+        *,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        page: int = 1,
+        limit: int = 50,
+        auth_token: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Get sales transactions from ledger service filtered by source=POS.
+        
+        Args:
+            start_date: ISO format date string (YYYY-MM-DD)
+            end_date: ISO format date string (YYYY-MM-DD)
+            page: Page number for pagination
+            limit: Number of results per page
+            auth_token: Authentication token
+            
+        Returns:
+            Dict with transactions data, pagination info, and totals
+        """
+        logger.info(
+            "LEDGER_SALES_QUERY start_date=%s end_date=%s page=%d limit=%d",
+            start_date, end_date, page, limit
+        )
+        
+        headers = {"Content-Type": "application/json"}
+        if auth_token:
+            headers["Authorization"] = f"Bearer {auth_token}"
+        
+        # Build query parameters
+        params = {
+            "source": ledger.TransactionSource.POS.value,  # Filter by POS transactions
+            "page": page,
+            "limit": limit
+        }
+        
+        if start_date:
+            params["start_date"] = start_date
+        if end_date:
+            params["end_date"] = end_date
+        
+        url = f"{self.ledger_base_url}/api/v1/transactions"
+        
+        try:
+            response = await self.client.get(url, params=params, headers=headers)
+            logger.info("LEDGER_SALES_STATUS status=%s", response.status_code)
+            
+            if response.status_code >= 400:
+                detail = response.text
+                logger.warning(
+                    "LEDGER_SALES_FAILED status=%s body=%s",
+                    response.status_code, detail
+                )
+                raise RuntimeError(f"Ledger query failed: {response.status_code} {detail}")
+            
+            data = response.json()
+            
+            # Handle the response - ledger returns a list directly, not a dict
+            if isinstance(data, list):
+                transactions = data
+                total = len(transactions)
+            else:
+                # If it's a dict with pagination info
+                transactions = data.get('data', data.get('transactions', []))
+                total = data.get('total', len(transactions))
+            
+            logger.info(
+                "LEDGER_SALES_SUCCESS total_records=%d page=%d",
+                total, page
+            )
+            
+            return {
+                'data': transactions,
+                'total': total,
+                'page': page,
+                'limit': limit
+            }
+            
+        except httpx.ConnectError as e:
+            logger.error("LEDGER_SALES_CONNECTION_ERROR url=%s error=%s", url, str(e))
+            raise RuntimeError(f"Cannot connect to ledger service at {url}: {str(e)}")
+        except httpx.TimeoutException as e:
+            logger.error("LEDGER_SALES_TIMEOUT url=%s error=%s", url, str(e))
+            raise RuntimeError(f"Ledger service timeout at {url}: {str(e)}")
+        except Exception as e:
+            logger.error("LEDGER_SALES_EXCEPTION error_type=%s error=%s", type(e).__name__, str(e))
+            raise RuntimeError(f"Ledger service error: {str(e)}")
 
 erp_service = ERPIntegrationService()

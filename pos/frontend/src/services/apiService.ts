@@ -70,7 +70,7 @@ export interface Sale {
   tax_amount: number;
   discount_amount: number;
   total_amount: number;
-  payment_method: string;
+  payment_method?: string;  // Optional since it may not be in ledger data
   tendered_amount?: number;
   change_amount?: number;
   customer_name?: string;

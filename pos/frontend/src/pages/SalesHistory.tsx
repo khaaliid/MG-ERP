@@ -87,7 +87,8 @@ const SalesHistory: React.FC = () => {
     });
   };
 
-  const formatPaymentMethod = (method: string) => {
+  const formatPaymentMethod = (method: string | undefined | null) => {
+    if (!method) return '💵 Cash';
     switch (method.toLowerCase()) {
       case 'cash':
         return '💵 Cash';

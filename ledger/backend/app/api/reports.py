@@ -158,11 +158,11 @@ async def get_income_statement(
            **Permission Required:** `financial:read`
            
            The General Ledger provides detailed transaction analysis:
-           - 📚 **All Transactions**: Complete transaction history by account
-           - 💰 **Running Balances**: Real-time balance calculation
-           - 🔍 **Account Filter**: Focus on specific account or view all
-           - 📅 **Date Range**: Flexible period selection
-           - 🎯 **Audit Trail**: Complete transaction tracking
+           -  **All Transactions**: Complete transaction history by account
+           -  **Running Balances**: Real-time balance calculation
+           -  **Account Filter**: Focus on specific account or view all
+           -  **Date Range**: Flexible period selection
+           -  **Audit Trail**: Complete transaction tracking
            """)
 async def get_general_ledger(
     account_id: Optional[int] = Query(None, description="Specific account ID (optional)"),

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { enhancedApiService } from '../services/enhancedApiService';
+import { enhancedApiService, Sale } from '../services/enhancedApiService';
 import { useAuth } from '../contexts/AuthContext';
 
 function formatEGP(v: number) {
@@ -31,15 +31,25 @@ const Reports: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      // Fetch sales data for the date range
-      const response = await enhancedApiService.getSales(
-        1, 
-        1000, // Get more records for reporting
-        dateRange.startDate,
-        dateRange.endDate
-      );
+      // Fetch all sales data for the date range (paginate if needed)
+      let allSales: Sale[] = [];
+      let page = 1;
+      let hasMore = true;
       
-      const sales = response.data;
+      while (hasMore) {
+        const response = await enhancedApiService.getSales(
+          page, 
+          100, // Max allowed per page
+          dateRange.startDate,
+          dateRange.endDate
+        );
+        console.log('Fetched sales page', page, response);
+        allSales = [...allSales, ...response.data];        
+        hasMore = response.data.length === 100 && allSales.length < response.total;
+        page++;
+      }
+      
+      const sales = allSales;
       
       // Calculate summary statistics
       const totalSales = sales.length;
@@ -49,8 +59,9 @@ const Reports: React.FC = () => {
       // Group by payment method
       const paymentMethods: Record<string, number> = {};
       sales.forEach(sale => {
-        const method = sale.payment_method.charAt(0).toUpperCase() + sale.payment_method.slice(1);
-        paymentMethods[method] = (paymentMethods[method] || 0) + sale.total_amount;
+        const method = sale.payment_method || 'cash';
+        const capitalizedMethod = method.charAt(0).toUpperCase() + method.slice(1);
+        paymentMethods[capitalizedMethod] = (paymentMethods[capitalizedMethod] || 0) + sale.total_amount;
       });
       
       setSalesSummary({
