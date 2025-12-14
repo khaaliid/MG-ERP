@@ -1,14 +1,38 @@
 """
 POS Configuration
 
-Stateless POS system configuration.
-No database connections - pure API orchestration.
+POS system with local PostgreSQL persistence and async database support.
 """
 
 import os
 from dotenv import load_dotenv
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker
 
 load_dotenv()
+
+# Database URL - shared postgres instance
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql+asyncpg://mguser:mgpassword@localhost/mgerp"
+)
+
+engine = create_async_engine(DATABASE_URL, echo=True)
+SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+# Schema configuration
+POS_SCHEMA = "pos"
+
+# Async session generator
+async def get_session():
+    """Get async database session."""
+    async with SessionLocal() as session:
+        yield session
+
+# Create a direct session for initialization
+async def create_session():
+    """Create a new async database session."""
+    return SessionLocal()
 
 # External Service URLs
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8004")

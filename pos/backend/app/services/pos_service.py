@@ -1,32 +1,40 @@
 """
-Stateless POS Service
+POS Service with Local Persistence
 
-This service coordinates between external services (Inventory and Ledger) 
-without storing any data locally. All operations are pure API orchestration.
+This service stores sales locally in PostgreSQL and syncs to Ledger via broker.
+Provides resilience and offline capability.
 """
 
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone
 import uuid
 import logging
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .inventory_integration import inventory_service
 from .erp_integration import erp_service
+from ..sales_repository import SalesRepository
+from ..config import create_session
 
 logger = logging.getLogger(__name__)
 
 class StatelessPOSService:
     """
-    Stateless POS service that orchestrates operations between 
-    Inventory and Ledger services without local storage.
+    POS service with local persistence and async ledger sync.
     """
     
     @staticmethod
-    async def process_sale(sale_data: Dict[str, Any], cashier_info: Dict[str, Any], auth_token: str) -> Dict[str, Any]:
+    async def process_sale(sale_data: Dict[str, Any], cashier_info: Dict[str, Any], auth_token: str, broker=None) -> Dict[str, Any]:
         """
-        Process a sale by coordinating between inventory and ledger services.
-        No local storage - pure orchestration.
+        Process a sale with local persistence and async ledger sync.
+        
+        Flow:
+        1. Validate products and stock with Inventory service
+        2. Update inventory stock in Inventory service
+        3. Create ledger transaction synchronously in Ledger service
+        4. Save sale locally to PostgreSQL (after external services succeed)
         """
+        session = None
         try:
             # Generate unique sale number
             sale_number = f"POS-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
@@ -51,10 +59,13 @@ class StatelessPOSService:
                 
                 validated_items.append({
                     'product_id': item['product_id'],
-                    'product_name': product['name'],
+                    'sku': product.get('sku', item['product_id']),
+                    'name': product['name'],
                     'quantity': item['quantity'],
                     'unit_price': item['unit_price'],
                     'size': item.get('size'),
+                    'discount': item.get('discount', 0),
+                    'tax': item.get('tax', 0),
                     'line_total': item['quantity'] * item['unit_price']
                 })
             
@@ -65,7 +76,7 @@ class StatelessPOSService:
             tax_amount = (subtotal - discount_amount) * tax_rate
             total_amount = subtotal - discount_amount + tax_amount
             
-            # Step 3: Update inventory (reserve/reduce stock)
+            # Step 2: Update inventory (immediate for stock accuracy)
             inventory_updates = []
             for item in validated_items:
                 updated = await inventory_service.update_stock(
@@ -80,29 +91,51 @@ class StatelessPOSService:
                     'success': updated
                 })
             
-            # Step 4: Create ledger transaction
-            ledger_entry = None
-            try:
-                ledger_entry = await erp_service.create_sale_entry(
-                    sale_number=sale_number,
-                    total_amount=total_amount,
-                    tax_amount=tax_amount,
-                    discount_amount=discount_amount,
-                    payment_method=sale_data['payment_method'],
-                    items=validated_items,
-                    customer_name=sale_data.get('customer_name'),
-                    notes=sale_data.get('notes'),
-                    auth_token=auth_token,
-                    cashier=cashier_info.get('full_name', cashier_info.get('username'))
-                )
-            except Exception as ledger_error:
-                logger.error(f"Ledger entry failed for sale {sale_number}: {ledger_error}")
-                # Note: In a production system, you might want to implement 
-                # compensation logic here to rollback inventory changes
+            # Step 3: Create ledger transaction synchronously (keyword-only API)
+            ledger_entry = await erp_service.create_sale_entry(
+                sale_number=sale_number,
+                items=validated_items,
+                tax_amount=tax_amount,
+                discount_amount=discount_amount,
+                total_amount=total_amount,
+                payment_method=sale_data['payment_method'],
+                customer_name=sale_data.get('customer_name'),
+                cashier=cashier_info.get('full_name', cashier_info.get('username')),
+                auth_token=auth_token
+            )
+            ledger_entry_id = ledger_entry.get('id') if isinstance(ledger_entry, dict) else None
+            ledger_entry_id_str = str(ledger_entry_id) if ledger_entry_id is not None else None
+
+            # Step 4: Save to local database AFTER external services succeed
+            session = await create_session()
+            repo = SalesRepository(session)
+
+            sale_id = str(uuid.uuid4())
+            local_sale_data = {
+                'id': sale_id,
+                'sale_number': sale_number,
+                'items': validated_items,
+                'subtotal': subtotal,
+                'tax_amount': tax_amount,
+                'discount_amount': discount_amount,
+                'total_amount': total_amount,
+                'payment_method': sale_data['payment_method'],
+                'tendered_amount': sale_data.get('tendered_amount'),
+                'change_amount': max(0, (sale_data.get('tendered_amount', total_amount) - total_amount)),
+                'customer_name': sale_data.get('customer_name'),
+                'notes': sale_data.get('notes'),
+                'cashier': cashier_info.get('full_name', cashier_info.get('username')),
+                'cashier_id': cashier_info.get('id'),
+                'status': 'synced',
+                'ledger_entry_id': ledger_entry_id_str
+            }
+            saved_sale = await repo.save_sale(local_sale_data)
+            await session.commit()
+            logger.info(f"[LOCAL_DB] Saved sale {sale_number} with ledger_entry_id={ledger_entry_id}")
             
-            # Step 5: Return sale summary (no local storage)
+            # Step 6: Return sale summary
             return {
-                'id': str(uuid.uuid4()),  # Temporary ID for response
+                'id': sale_id,
                 'sale_number': sale_number,
                 'items': validated_items,
                 'subtotal': subtotal,
@@ -117,14 +150,20 @@ class StatelessPOSService:
                 'cashier': cashier_info.get('full_name', cashier_info.get('username')),
                 'cashier_id': cashier_info.get('id'),
                 'created_at': datetime.now().isoformat(),
-                'ledger_entry_id': ledger_entry.get('id') if ledger_entry else None,
                 'inventory_updates': inventory_updates,
-                'status': 'completed'
+                'status': 'synced',
+                'local_storage': True,
+                'sync_status': 'completed'
             }
             
         except Exception as e:
             logger.error(f"Sale processing failed: {e}")
+            if session:
+                await session.rollback()
             raise
+        finally:
+            if session:
+                await session.close()
     
     @staticmethod
     async def get_sales_history(

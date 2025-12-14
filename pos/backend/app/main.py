@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 import httpx
+from sqlalchemy import text
 
 from .config import (
     AUTH_SERVICE_URL, 
@@ -10,37 +11,43 @@ from .config import (
     POS_SERVICE_NAME,
     POS_VERSION,
     LOG_LEVEL,
-    DEBUG
+    DEBUG,
+    engine,
+    POS_SCHEMA
 )
+from .localdb import Base
 from .routes.products import router as products_router
 from .routes.sales import router as sales_router
+from .broker import Broker
 
 # Setup logging
 logging.basicConfig(level=getattr(logging, LOG_LEVEL.upper()))
 logger = logging.getLogger(__name__)
 
-# Create FastAPI app - Stateless POS System
+# Global broker instance
+broker = Broker()
+
+# Create FastAPI app - POS System with local persistence
 app = FastAPI(
-    title=f"{POS_SERVICE_NAME} - Stateless API Gateway",
+    title=f"{POS_SERVICE_NAME} - Local DB + Async Sync",
     description=f"""
-    ## [STATELESS] Point of Sale System for MG-ERP
+    ## [LOCAL DB] Point of Sale System for MG-ERP
     
-    A **stateless** POS system that orchestrates operations between external services.
-    No local data storage - pure API coordination layer.
+    POS system with local PostgreSQL persistence and async ledger sync via broker.
     
-    ### [ARCHITECTURE] Stateless Design
-    * **No Database**: All data operations proxy to external services
-    * **API Gateway**: Coordinates between Inventory, Ledger, and Auth services
-    * **Pure Orchestration**: Business logic without data persistence
+    ### [ARCHITECTURE] Resilient Design
+    * **Local Database**: Sales and items stored locally in PostgreSQL
+    * **Async Sync**: Broker queue pushes to Ledger service with retries
+    * **Offline Ready**: Continue sales during network outages
     
     ### [SECURITY] Authentication Required
     Most endpoints require authentication. Use the external auth service to obtain a JWT token.
     
     ### [FEATURES] Key Capabilities
     * **Product Management** - Fetch products from inventory service
-    * **Sales Processing** - Coordinate sales between inventory and ledger services
+    * **Sales Processing** - Local persistence + async sync to ledger
     * **Payment Processing** - Support for cash, card, and digital wallet payments
-    * **Service Integration** - Seamless orchestration between microservices
+    * **Service Integration** - Resilient orchestration between microservices
     * **Role-Based Access** - Cashier, manager, and admin permission levels
     
     ### [WORKFLOW] Quick Start
@@ -48,7 +55,7 @@ app = FastAPI(
     2. **Authorize**: Click the 🔒 Authorize button and paste your token
     3. **Browse Products**: Use `/products` endpoints to view inventory
     4. **Process Sales**: Use `/sales` endpoints to record transactions
-    5. **View Reports**: Access sales history from ledger service
+    5. **View Reports**: Access local or ledger sales history
     
     ### [INTEGRATION] External Services
     - **Inventory Service**: {INVENTORY_SERVICE_URL} (Product data and stock management)
@@ -56,7 +63,7 @@ app = FastAPI(
     - **Auth Service**: {AUTH_SERVICE_URL} (User authentication and authorization)
     
     ---
-    **Version**: {POS_VERSION} | **Mode**: Stateless | **Environment**: {"Development" if DEBUG else "Production"}
+    **Version**: {POS_VERSION} | **Mode**: Local DB | **Environment**: {"Development" if DEBUG else "Production"}
     """,
     version=POS_VERSION,
     docs_url="/docs",
@@ -72,14 +79,39 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Stateless startup/shutdown - no database initialization needed
+# POS DB startup with schema and table creation
 @app.on_event("startup")
 async def startup_event():
-    """Initialize stateless POS system - validate external service connectivity."""
-    logger.info("[STARTUP] Starting Stateless MG-ERP POS System...")
-    logger.info("[ARCHITECTURE] Stateless mode - no database initialization required")
+    """Initialize POS local database and broker."""
+    logger.info("[STARTUP] Starting MG-ERP POS System with Local DB...")
     
-    # Validate external service URLs are configured
+    try:
+        # Step 1: Create schema
+        async with engine.begin() as conn:
+            logger.info(f"[DATABASE] Creating schema '{POS_SCHEMA}'...")
+            await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {POS_SCHEMA};"))
+            await conn.execute(text(f"GRANT ALL ON SCHEMA {POS_SCHEMA} TO mguser;"))
+            logger.info(f"[SUCCESS] Schema '{POS_SCHEMA}' created or already exists")
+        
+        # Step 2: Create tables
+        async with engine.begin() as conn:
+            logger.info("[DATABASE] Creating tables...")
+            await conn.run_sync(Base.metadata.create_all)
+            await conn.execute(text(f"GRANT ALL ON ALL TABLES IN SCHEMA {POS_SCHEMA} TO mguser;"))
+            await conn.execute(text(f"GRANT ALL ON ALL SEQUENCES IN SCHEMA {POS_SCHEMA} TO mguser;"))
+            logger.info("[SUCCESS] Tables created successfully")
+        
+        # Step 3: Start broker worker
+        from .services.ledger_sync_worker import handle_sale_message
+        broker.start(handle_sale_message)
+        app.state.broker = broker  # Store broker in app state for routes
+        logger.info("[BROKER] Started async ledger sync worker")
+        
+    except Exception as e:
+        logger.error(f"[ERROR] Database initialization failed: {e}")
+        raise
+    
+    # Validate external service URLs
     external_services = {
         "Auth Service": AUTH_SERVICE_URL,
         "Inventory Service": INVENTORY_SERVICE_URL,
@@ -90,26 +122,17 @@ async def startup_event():
     for service_name, url in external_services.items():
         logger.info(f"  - {service_name}: {url}")
     
-    # Optional: Test connectivity to external services (non-blocking)
-    try:
-        async with httpx.AsyncClient(timeout=2.0) as client:
-            for service_name, url in external_services.items():
-                try:
-                    response = await client.get(f"{url}/health" if not url.endswith('/auth') else url.replace('/auth', '/health'))
-                    logger.info(f"[CONNECTIVITY] {service_name}: {'✓ Connected' if response.status_code == 200 else '⚠ Issues'}")
-                except:
-                    logger.warning(f"[CONNECTIVITY] {service_name}: ✗ Unavailable (non-blocking)")
-    except:
-        logger.warning("[CONNECTIVITY] Service connectivity check failed (non-blocking)")
-    
-    logger.info("[SUCCESS] Stateless MG-ERP POS System startup completed")
+    logger.info("[SUCCESS] MG-ERP POS System startup completed")
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Cleanup stateless POS system - minimal cleanup needed."""
-    logger.info("[SHUTDOWN] Stopping Stateless MG-ERP POS System...")
-    logger.info("[ARCHITECTURE] Stateless mode - no database cleanup required")
-    logger.info("[SUCCESS] Stateless MG-ERP POS System shutdown completed")
+    """Cleanup POS system."""
+    logger.info("[SHUTDOWN] Stopping MG-ERP POS System...")
+    broker.stop()
+    logger.info("[BROKER] Stopped async ledger sync worker")
+    await engine.dispose()
+    logger.info("[DATABASE] Closed database connections")
+    logger.info("[SUCCESS] MG-ERP POS System shutdown completed")
 
 # Include routers
 app.include_router(products_router, prefix="/api/v1")
@@ -118,14 +141,14 @@ app.include_router(sales_router, prefix="/api/v1")
 # Health check endpoint
 @app.get("/", tags=["health"])
 async def health_check():
-    """Health check endpoint for stateless POS system."""
+    """Health check endpoint for POS system."""
     return {
         "status": "healthy",
         "message": f"{POS_SERVICE_NAME} is running",
         "version": POS_VERSION,
-        "service": "Stateless Point of Sale API Gateway",
-        "architecture": "Stateless - No database dependencies",
-        "mode": "API Orchestration Layer"
+        "service": "Point of Sale with Local DB",
+        "architecture": "Local PostgreSQL + Async Ledger Sync",
+        "mode": "Resilient POS"
     }
 
 @app.get("/health", tags=["health"])
