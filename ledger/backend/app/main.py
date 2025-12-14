@@ -7,6 +7,7 @@ from .config import engine, create_session, SessionLocal
 from .services.ledger import Base, Account, AccountType
 from sqlalchemy import select
 from .api.router import api_router
+from .routes.periods import router as periods_router
 from .logging_config import setup_logging
 from .config import AUTH_SERVICE_URL
 
@@ -195,6 +196,7 @@ async def startup_event():
 
 # Include API routers
 app.include_router(api_router, prefix="/api/v1")
+app.include_router(periods_router, prefix="/api/v1")
 
 # Health check endpoint
 @app.get("/", tags=["health"], summary="[HEALTH] Basic Health Check", 

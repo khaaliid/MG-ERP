@@ -21,6 +21,11 @@ class AccountType(enum.Enum):
     INCOME = "income"
     EXPENSE = "expense"
 
+class PeriodStatus(enum.Enum):
+    OPEN = "open"
+    CLOSED = "closed"
+    LOCKED = "locked"
+
 class Account(Base):
     __tablename__ = "accounts"
     __table_args__ = {'schema': SCHEMA_NAME}
@@ -93,6 +98,34 @@ class TransactionLine(Base):
         """Validate transaction type is debit or credit"""
         if type_value not in ('debit', 'credit'):
             raise ValueError("Transaction line type must be 'debit' or 'credit'")
+        return type_value
+
+class AccountingPeriod(Base):
+    """Accounting periods for journal closure and financial reporting."""
+    __tablename__ = "accounting_periods"
+    __table_args__ = (
+        UniqueConstraint('period_start', 'period_end', name='uq_period_dates'),
+        Index('idx_period_status', 'status'),
+        Index('idx_period_dates', 'period_start', 'period_end'),
+        {'schema': SCHEMA_NAME}
+    )
+    
+    id = Column(Integer, primary_key=True, index=True)
+    period_start = Column(DateTime(timezone=True), nullable=False)
+    period_end = Column(DateTime(timezone=True), nullable=False)
+    status = Column(Enum(PeriodStatus, schema=SCHEMA_NAME), nullable=False, default=PeriodStatus.OPEN)
+    fiscal_year = Column(Integer, nullable=False)
+    name = Column(String, nullable=True)  # e.g., "Q1 2025", "December 2025"
+    closed_by = Column(String, nullable=True)  # user ID or username who closed it
+    closed_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    
+    @validates('period_end')
+    def validate_period_end(self, key, period_end):
+        """Validate period_end is after period_start."""
+        if hasattr(self, 'period_start') and self.period_start and period_end <= self.period_start:
+            raise ValueError("Period end date must be after period start date")
+        return period_end
         return type_value
 
 # CRUD operations for accounts
@@ -191,6 +224,27 @@ async def get_account_by_code(db: AsyncSession, code: str) -> Optional[Account]:
         logger.error(f"[ERROR] Error finding account by code '{code}': {str(e)}")
         raise
 
+# Period management functions
+async def get_period_for_date(db: AsyncSession, date: datetime) -> Optional[AccountingPeriod]:
+    """Get the accounting period that contains the given date."""
+    logger.debug(f"[PERIOD] Checking for period containing date: {date}")
+    try:
+        result = await db.execute(
+            select(AccountingPeriod).where(
+                and_(
+                    AccountingPeriod.period_start <= date,
+                    AccountingPeriod.period_end >= date
+                )
+            )
+        )
+        period = result.scalars().first()
+        if period:
+            logger.debug(f"[PERIOD] Found period: {period.name} (Status: {period.status.value})")
+        return period
+    except Exception as e:
+        logger.error(f"[ERROR] Error finding period for date: {str(e)}")
+        raise
+
 # CRUD operations for transactions
 async def get_all_transactions(db: AsyncSession):
     logger.debug("[DATABASE] Fetching all transactions from database with relationships")
@@ -217,6 +271,17 @@ async def create_transaction(db: AsyncSession, transaction_data):
     logger.debug(f"[DATE] Transaction date: {transaction_data.date}")
     logger.debug(f"[DETAILS] Transaction source: {transaction_data.source}")
     logger.debug(f"🔖 Transaction reference: {transaction_data.reference}")
+    
+    # Check if transaction date falls within a closed period
+    transaction_date = transaction_data.date
+    if hasattr(transaction_date, 'tzinfo') and transaction_date.tzinfo is not None:
+        transaction_date = transaction_date.replace(tzinfo=None)
+    
+    closed_period = await get_period_for_date(db, transaction_date)
+    if closed_period and closed_period.status in (PeriodStatus.CLOSED, PeriodStatus.LOCKED):
+        error_msg = f"Cannot create transaction: Period from {closed_period.period_start.date()} to {closed_period.period_end.date()} is {closed_period.status.value}"
+        logger.error(f"[PERIOD_ERROR] {error_msg}")
+        raise ValueError(error_msg)
     
     # Enhanced validation with detailed error reporting
     validation_result = await validate_transaction_data(db, transaction_data)
