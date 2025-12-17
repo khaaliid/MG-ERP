@@ -126,7 +126,7 @@ services:
 
   # POS Backend Service
   pos-backend:
-    image: mg-erp/mg-pos:latest
+    image: ghcr.io/khaaliid/mg-erp/mg-pos:latest
     container_name: mg-erp-pos-backend
     restart: unless-stopped
     env_file:
@@ -161,7 +161,7 @@ services:
 
   # POS Frontend
   pos-frontend:
-    image: mg-erp/mg-pos-frontend:latest
+    image: ghcr.io/khaaliid/mg-erp/mg-pos-frontend:latest
     container_name: mg-erp-pos-frontend
     restart: unless-stopped
     env_file:
