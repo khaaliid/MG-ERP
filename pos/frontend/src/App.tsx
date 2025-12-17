@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LoadingProvider, useLoading } from './contexts/LoadingContext';
+import { SettingsProvider } from './contexts/SettingsContext';
 import { enhancedApiService } from './services/enhancedApiService';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './components/Login';
@@ -9,6 +10,7 @@ import Header from './components/Header';
 import LoadingScreen from './components/LoadingScreen';
 import POS from './pages/POS';
 import SalesHistory from './pages/SalesHistory';
+import Settings from './pages/Settings';
 import Reports from './pages/Reports';
 import './App.css';
 
@@ -50,6 +52,20 @@ const AppContent: React.FC = () => {
           element={
             isAuthenticated ? <Navigate to="/" replace /> : <Login />
           } 
+          />
+          <Route 
+            path="/settings" 
+            element={
+              isAuthenticated ? (
+                <MainLayout>
+                  <ProtectedRoute requiredRole="admin">
+                    <Settings />
+                  </ProtectedRoute>
+                </MainLayout>
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            } 
         />
         
         {/* Protected Routes */}
@@ -118,9 +134,11 @@ const App: React.FC = () => {
   return (
     <LoadingProvider>
       <AuthProvider>
-        <Router>
-          <AppContent />
-        </Router>
+        <SettingsProvider>
+          <Router>
+            <AppContent />
+          </Router>
+        </SettingsProvider>
       </AuthProvider>
     </LoadingProvider>
   );

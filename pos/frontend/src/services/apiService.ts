@@ -153,13 +153,19 @@ class APIService {
       if (!this.token) {
         this.reloadToken();
       }
+      // Add abortable timeout to prevent hanging requests from blocking UI
+      const controller = new AbortController();
+      const timeoutMs = 10000; // 10s timeout
+      const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
       const response = await fetch(url, {
         ...options,
         headers: {
           ...this.getAuthHeaders(),
           ...options?.headers,
         },
+        signal: controller.signal,
       });
+      window.clearTimeout(timeoutId);
 
       if (response.status === 401) {
         // Only clear token if the failure is from auth endpoints (profile/refresh/login scope)
@@ -188,6 +194,9 @@ class APIService {
 
       return await response.json();
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw new Error('Network timeout. Please try again.');
+      }
       if (error instanceof Error) {
         throw error;
       }

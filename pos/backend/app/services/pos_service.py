@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .inventory_integration import inventory_service
 from .erp_integration import erp_service
 from ..sales_repository import SalesRepository
+from ..settings_repository import SettingsRepository
 from ..config import create_session
 
 logger = logging.getLogger(__name__)
@@ -69,12 +70,28 @@ class StatelessPOSService:
                     'line_total': item['quantity'] * item['unit_price']
                 })
             
-            # Step 2: Calculate totals
+            # Open session early to read settings and reuse for save
+            session = await create_session()
+            settings_repo = SettingsRepository(session)
+            settings = await settings_repo.get_or_create_settings()
+
+            # Step 2: Calculate totals using settings
             subtotal = sum(item['line_total'] for item in validated_items)
             discount_amount = sale_data.get('discount_amount', 0)
-            tax_rate = sale_data.get('tax_rate', 0.14)
-            tax_amount = (subtotal - discount_amount) * tax_rate
-            total_amount = subtotal - discount_amount + tax_amount
+            # Prefer explicit tax_rate from request; fallback to settings
+            tax_rate = sale_data.get('tax_rate', (settings.tax_rate if settings and settings.tax_rate is not None else 0.14))
+            tax_inclusive_flag = False
+            if settings and isinstance(getattr(settings, 'tax_inclusive', None), str):
+                tax_inclusive_flag = settings.tax_inclusive.lower() == "true"
+
+            base_after_discount = max(0, subtotal - discount_amount)
+            if tax_inclusive_flag:
+                base_without_tax = base_after_discount / (1 + tax_rate) if tax_rate and tax_rate > 0 else base_after_discount
+                tax_amount = base_after_discount - base_without_tax
+                total_amount = base_after_discount
+            else:
+                tax_amount = base_after_discount * tax_rate
+                total_amount = base_after_discount + tax_amount
             
             # Step 2: Update inventory (immediate for stock accuracy)
             inventory_updates = []
@@ -107,7 +124,6 @@ class StatelessPOSService:
             ledger_entry_id_str = str(ledger_entry_id) if ledger_entry_id is not None else None
 
             # Step 4: Save to local database AFTER external services succeed
-            session = await create_session()
             repo = SalesRepository(session)
 
             sale_id = str(uuid.uuid4())
@@ -142,6 +158,7 @@ class StatelessPOSService:
                 'tax_amount': tax_amount,
                 'discount_amount': discount_amount,
                 'total_amount': total_amount,
+                'tax_rate': tax_rate,
                 'payment_method': sale_data['payment_method'],
                 'tendered_amount': sale_data.get('tendered_amount'),
                 'change_amount': max(0, (sale_data.get('tendered_amount', total_amount) - total_amount)),
@@ -153,7 +170,10 @@ class StatelessPOSService:
                 'inventory_updates': inventory_updates,
                 'status': 'synced',
                 'local_storage': True,
-                'sync_status': 'completed'
+                'sync_status': 'completed',
+                'currency_code': getattr(settings, 'currency_code', 'USD') if settings else 'USD',
+                'currency_symbol': getattr(settings, 'currency_symbol', '$') if settings else '$',
+                'tax_inclusive': 'true' if tax_inclusive_flag else 'false'
             }
             
         except Exception as e:

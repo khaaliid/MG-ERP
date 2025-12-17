@@ -10,8 +10,10 @@ COPY package*.json ./
 # Install dependencies
 RUN npm ci
 
-# Copy environment file for Docker
-COPY .env.docker .env
+# Build-time environment for Vite
+ARG VITE_API_BASE_URL=http://pos-backend:8001/api/v1
+ARG VITE_AUTH_BASE_URL=http://auth:8004/api/v1/auth
+RUN printf "VITE_API_BASE_URL=%s\nVITE_AUTH_BASE_URL=%s\n" "$VITE_API_BASE_URL" "$VITE_AUTH_BASE_URL" > .env
 
 # Copy source code
 COPY . .
@@ -22,8 +24,8 @@ RUN npm run build
 # Production stage
 FROM nginx:alpine
 
-# Copy custom nginx config if needed
-# COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy custom nginx config
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built application from build stage
 COPY --from=build /app/dist /usr/share/nginx/html

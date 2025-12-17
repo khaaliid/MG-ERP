@@ -15,17 +15,14 @@ from .config import (
     engine,
     POS_SCHEMA
 )
-from .localdb import Base
+from .localdb import Base, POSSettings  # Import POSSettings to register with metadata
 from .routes.products import router as products_router
+from .routes.settings import router as settings_router
 from .routes.sales import router as sales_router
-from .broker import Broker
 
 # Setup logging
 logging.basicConfig(level=getattr(logging, LOG_LEVEL.upper()))
 logger = logging.getLogger(__name__)
-
-# Global broker instance
-broker = Broker()
 
 # Create FastAPI app - POS System with local persistence
 app = FastAPI(
@@ -101,12 +98,6 @@ async def startup_event():
             await conn.execute(text(f"GRANT ALL ON ALL SEQUENCES IN SCHEMA {POS_SCHEMA} TO mguser;"))
             logger.info("[SUCCESS] Tables created successfully")
         
-        # Step 3: Start broker worker
-        from .services.ledger_sync_worker import handle_sale_message
-        broker.start(handle_sale_message)
-        app.state.broker = broker  # Store broker in app state for routes
-        logger.info("[BROKER] Started async ledger sync worker")
-        
     except Exception as e:
         logger.error(f"[ERROR] Database initialization failed: {e}")
         raise
@@ -128,14 +119,13 @@ async def startup_event():
 async def shutdown_event():
     """Cleanup POS system."""
     logger.info("[SHUTDOWN] Stopping MG-ERP POS System...")
-    broker.stop()
-    logger.info("[BROKER] Stopped async ledger sync worker")
     await engine.dispose()
     logger.info("[DATABASE] Closed database connections")
     logger.info("[SUCCESS] MG-ERP POS System shutdown completed")
 
 # Include routers
 app.include_router(products_router, prefix="/api/v1")
+app.include_router(settings_router, prefix="/api/v1")
 app.include_router(sales_router, prefix="/api/v1")
 
 # Health check endpoint

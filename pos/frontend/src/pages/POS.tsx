@@ -8,18 +8,22 @@ import { useNavigate } from 'react-router-dom';
 import { enhancedApiService, Product, Category } from "../services/enhancedApiService";
 import { useAuth } from "../contexts/AuthContext";
 
-function formatEGP(v: number) {
-  // Add safety check for invalid numbers
+function formatCurrency(v: number, currencyCode: string) {
   const value = typeof v === 'number' && !isNaN(v) ? v : 0;
-  return `${value.toFixed(2)} EGP`;
+  try {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: currencyCode || 'USD' }).format(value);
+  } catch {
+    return `${value.toFixed(2)} ${currencyCode || 'USD'}`;
+  }
 }
 
 interface ProductTileProps {
   product: Product;
   onAdd: (product: Product) => void;
+  currencyCode: string;
 }
 
-function ProductTile({ product, onAdd }: ProductTileProps) {
+function ProductTile({ product, onAdd, currencyCode }: ProductTileProps) {
   // Add defensive checks
   if (!product) {
     return <div className="bg-red-100 p-4 rounded-lg">Invalid product data</div>;
@@ -34,7 +38,7 @@ function ProductTile({ product, onAdd }: ProductTileProps) {
     <div className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow cursor-pointer p-4" onClick={() => onAdd(product)}>
       <div className="font-medium text-gray-900 mb-2">{name}</div>
       <div className="flex justify-between items-center mb-2">
-        <div className="text-lg font-bold text-blue-600">{formatEGP(price)}</div>
+        <div className="text-lg font-bold text-blue-600">{formatCurrency(price, currencyCode)}</div>
         <div className="text-sm text-gray-500">{sku}</div>
       </div>
       {product.sizes && Array.isArray(product.sizes) && product.sizes.length > 0 && (
@@ -79,15 +83,16 @@ interface CartItemProps {
   onInc: (id: string) => void;
   onDec: (id: string) => void;
   onRemove: (id: string) => void;
+  currencyCode: string;
 }
 
-function CartItem({ item, onInc, onDec, onRemove }: CartItemProps) {
+function CartItem({ item, onInc, onDec, onRemove, currencyCode }: CartItemProps) {
   return (
     <div className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm border">
       <div className="flex-1">
         <div className="font-medium text-gray-900">{item.name}</div>
         {item.size && <div className="text-sm text-gray-600">Size: {item.size}</div>}
-        <div className="text-sm text-gray-600">{formatEGP(item.price)} each</div>
+        <div className="text-sm text-gray-600">{formatCurrency(item.price, currencyCode)} each</div>
       </div>
       <div className="flex items-center space-x-2">
         <button 
@@ -111,7 +116,7 @@ function CartItem({ item, onInc, onDec, onRemove }: CartItemProps) {
         </button>
       </div>
       <div className="text-right ml-4">
-        <div className="font-medium text-gray-900">{formatEGP(item.qty * item.price)}</div>
+        <div className="font-medium text-gray-900">{formatCurrency(item.qty * item.price, currencyCode)}</div>
       </div>
     </div>
   );
@@ -127,8 +132,9 @@ export default function POS() {
   const [filter, setFilter] = useState("");
   const [category, setCategory] = useState("All");
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [discount, setDiscount] = useState(0); // EGP
-  const [taxPct] = useState(14); // example VAT %
+  const [discount, setDiscount] = useState(0); // currency-dependent
+  const [taxPct, setTaxPct] = useState(14); // VAT %, loaded from settings
+  const [currencyCode, setCurrencyCode] = useState('USD');
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [tendered, setTendered] = useState("");
@@ -168,6 +174,29 @@ export default function POS() {
         
         setProducts(products);
         setCategories(categories);
+
+        // Load POS settings (tax and currency)
+        try {
+          const apiBase = (import.meta as any).env?.VITE_API_BASE_URL || '';
+          const token = localStorage.getItem('pos_auth_token') || '';
+          const resp = await fetch(`${apiBase}/settings/`, {
+            headers: {
+              'Authorization': token ? `Bearer ${token}` : '',
+              'Accept': 'application/json'
+            }
+          });
+          if (resp.ok) {
+            const s = await resp.json();
+            if (typeof s.tax_rate === 'number') {
+              setTaxPct(Math.round(s.tax_rate * 100));
+            }
+            if (typeof s.currency_code === 'string') {
+              setCurrencyCode(s.currency_code);
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to load POS settings; using defaults');
+        }
         
       } catch (err) {
         console.error('Error loading data:', err);
@@ -293,7 +322,7 @@ export default function POS() {
       
       const sale = await enhancedApiService.createSale(saleData);
       
-      alert(`Payment success!\nSale #: ${sale.sale_number}\nMethod: ${paymentMethod}\nTotal: ${formatEGP(total)}`);
+      alert(`Payment success!\nSale #: ${sale.sale_number}\nMethod: ${paymentMethod}\nTotal: ${formatCurrency(total, currencyCode)}`);
       
       // reset cart
       setCart([]);
@@ -430,7 +459,7 @@ export default function POS() {
             {/* Products Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {filtered.map((p) => (
-                <ProductTile key={p.id} product={p} onAdd={addToCart} />
+                <ProductTile key={p.id} product={p} onAdd={addToCart} currencyCode={currencyCode} />
               ))}
               {filtered.length === 0 && (
                 <div className="col-span-full text-center text-gray-500 py-8">
@@ -457,7 +486,7 @@ export default function POS() {
               </div>
             )}
             {cart.map((it) => (
-              <CartItem key={`${it.id}-${typeof it.size === 'string' ? it.size : 'no-size'}`} item={it} onInc={inc} onDec={dec} onRemove={removeItem} />
+              <CartItem key={`${it.id}-${typeof it.size === 'string' ? it.size : 'no-size'}`} item={it} onInc={inc} onDec={dec} onRemove={removeItem} currencyCode={currencyCode} />
             ))}
           </div>
 
@@ -465,7 +494,7 @@ export default function POS() {
           <div className="p-4 border-t bg-white space-y-3">
             <div className="flex justify-between">
               <span className="text-gray-600">Subtotal</span>
-              <strong className="text-gray-900">{formatEGP(calcSubtotal())}</strong>
+              <strong className="text-gray-900">{formatCurrency(calcSubtotal(), currencyCode)}</strong>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Discount</span>
@@ -479,11 +508,11 @@ export default function POS() {
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Tax ({taxPct}%)</span>
-              <strong className="text-gray-900">{formatEGP(calcTax(calcSubtotal()))}</strong>
+              <strong className="text-gray-900">{formatCurrency(calcTax(calcSubtotal()), currencyCode)}</strong>
             </div>
             <div className="flex justify-between text-lg">
               <span className="font-semibold text-gray-900">Total</span>
-              <strong className="text-blue-600">{formatEGP(calcTotal())}</strong>
+              <strong className="text-blue-600">{formatCurrency(calcTotal(), currencyCode)}</strong>
             </div>
           </div>
 
@@ -562,7 +591,7 @@ export default function POS() {
               <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                 <div className="flex justify-between text-lg font-semibold">
                   <span>Amount due:</span>
-                  <span className="text-blue-600">{formatEGP(calcTotal())}</span>
+                  <span className="text-blue-600">{formatCurrency(calcTotal(), currencyCode)}</span>
                 </div>
                 
                 {paymentMethod === "Cash" && (
@@ -576,7 +605,7 @@ export default function POS() {
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <div className="mt-2 text-sm text-gray-600">
-                      Change: {tendered ? formatEGP(Math.max(0, parseFloat(tendered) - calcTotal())) : "0.00 EGP"}
+                      Change: {tendered ? formatCurrency(Math.max(0, parseFloat(tendered) - calcTotal()), currencyCode) : `0.00 ${currencyCode}`}
                     </div>
                   </div>
                 )}

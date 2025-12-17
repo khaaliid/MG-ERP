@@ -52,3 +52,37 @@ class SaleItem(Base):
     line_total = Column(Float, nullable=False)
 
     sale = relationship("Sale", back_populates="items")
+
+class POSSettings(Base):
+    __tablename__ = "settings"
+    __table_args__ = {'schema': SCHEMA_NAME}
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    # Tax settings
+    tax_rate = Column(Float, default=0.14, nullable=False)  # Default 14%
+    tax_inclusive = Column(String, default="false", nullable=False)  # "true" or "false"
+    
+    # Currency settings
+    currency_code = Column(String, default="USD", nullable=False)
+    currency_symbol = Column(String, default="$", nullable=False)
+    
+    # Business information
+    business_name = Column(String, nullable=True)
+    business_address = Column(String, nullable=True)
+    business_phone = Column(String, nullable=True)
+    business_email = Column(String, nullable=True)
+    business_tax_id = Column(String, nullable=True)
+    
+    # Receipt settings
+    receipt_header = Column(String, nullable=True)
+    receipt_footer = Column(String, nullable=True)
+    print_receipt = Column(String, default="true", nullable=False)  # "true" or "false"
+    
+    # Other settings
+    require_customer_name = Column(String, default="false", nullable=False)  # "true" or "false"
+    allow_discounts = Column(String, default="true", nullable=False)  # "true" or "false"
+    low_stock_threshold = Column(Integer, default=10, nullable=False)
+    
+    # Metadata
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_by = Column(String, nullable=True)
