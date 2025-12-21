@@ -111,18 +111,18 @@ class ProductService {
   }
 
   // Categories
-  async getCategories(): Promise<ApiResponse<Array<{ id: string; name: string }>>> {
-    return baseApiService.get<ApiResponse<Array<{ id: string; name: string }>>>('/categories')
+  async getCategories(): Promise<Array<{ id: string; name: string; description?: string }>> {
+    return baseApiService.get<Array<{ id: string; name: string; description?: string }>>('/categories')
   }
 
   // Brands
-  async getBrands(): Promise<ApiResponse<Array<{ id: string; name: string }>>> {
-    return baseApiService.get<ApiResponse<Array<{ id: string; name: string }>>>('/brands')
+  async getBrands(): Promise<Array<{ id: string; name: string; description?: string }>> {
+    return baseApiService.get<Array<{ id: string; name: string; description?: string }>>('/brands')
   }
 
   // Suppliers
-  async getSuppliers(): Promise<ApiResponse<Array<{ id: string; name: string }>>> {
-    return baseApiService.get<ApiResponse<Array<{ id: string; name: string }>>>('/suppliers')
+  async getSuppliers(): Promise<Array<{ id: string; name: string; contactPerson?: string }>> {
+    return baseApiService.get<Array<{ id: string; name: string; contactPerson?: string }>>('/suppliers')
   }
 }
 

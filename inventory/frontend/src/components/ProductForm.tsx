@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { productService } from '../services/productService'
 
 interface ProductFormData {
   name: string
@@ -76,29 +77,16 @@ const ProductForm = ({ initialData, onSubmit, onCancel, isLoading = false }: Pro
     const loadFormData = async () => {
       try {
         setLoadingData(true)
-        const baseUrl = 'http://localhost:8002/api/v1'
-        
-        // Load categories, brands, and suppliers in parallel
-        const [categoriesRes, brandsRes, suppliersRes] = await Promise.all([
-          fetch(`${baseUrl}/categories/`),
-          fetch(`${baseUrl}/brands/`),
-          fetch(`${baseUrl}/suppliers/`)
+        // Load categories, brands, and suppliers via API service (with auth)
+        const [categoriesData, brandsData, suppliersData] = await Promise.all([
+          productService.getCategories(),
+          productService.getBrands(),
+          productService.getSuppliers()
         ])
-        
-        if (categoriesRes.ok) {
-          const categoriesData = await categoriesRes.json()
-          setCategories(categoriesData)
-        }
-        
-        if (brandsRes.ok) {
-          const brandsData = await brandsRes.json()
-          setBrands(brandsData)
-        }
-        
-        if (suppliersRes.ok) {
-          const suppliersData = await suppliersRes.json()
-          setSuppliers(suppliersData)
-        }
+
+        setCategories(categoriesData)
+        setBrands(brandsData)
+        setSuppliers(suppliersData)
         
       } catch (error) {
         console.error('Failed to load form data:', error)

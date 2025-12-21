@@ -22,7 +22,7 @@ export interface CategoryUpdate {
 }
 
 class CategoryService {
-  private basePath = "/api/v1/categories";
+  private basePath = "/categories";
 
   async getCategories(): Promise<Category[]> {
     return baseApiService.get<Category[]>(this.basePath);
