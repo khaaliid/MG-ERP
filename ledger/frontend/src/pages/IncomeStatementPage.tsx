@@ -4,23 +4,23 @@ import { useAuth } from '../contexts/AuthContext';
 
 interface IncomeStatementData {
   report_type: string;
-  start_date: string;
-  end_date: string;
+  period: {
+    start_date: string;
+    end_date: string;
+  };
   income: {
     accounts: Array<{
-      id: number;
-      name: string;
-      code: string;
-      balance: number;
+      account_code: string;
+      account_name: string;
+      amount: number;
     }>;
     total: number;
   };
   expenses: {
     accounts: Array<{
-      id: number;
-      name: string;
-      code: string;
-      balance: number;
+      account_code: string;
+      account_name: string;
+      amount: number;
     }>;
     total: number;
   };
@@ -67,7 +67,28 @@ const IncomeStatementPage: React.FC = () => {
       }
 
       const result = await response.json();
-      setData(result);
+      
+      // Validate and clean data
+      const cleanedData = {
+        ...result,
+        income: {
+          accounts: (result.income?.accounts || []).map((acc: any) => ({
+            ...acc,
+            amount: typeof acc.amount === 'number' && !isNaN(acc.amount) ? acc.amount : 0
+          })),
+          total: typeof result.income?.total === 'number' && !isNaN(result.income.total) ? result.income.total : 0
+        },
+        expenses: {
+          accounts: (result.expenses?.accounts || []).map((acc: any) => ({
+            ...acc,
+            amount: typeof acc.amount === 'number' && !isNaN(acc.amount) ? acc.amount : 0
+          })),
+          total: typeof result.expenses?.total === 'number' && !isNaN(result.expenses.total) ? result.expenses.total : 0
+        },
+        net_income: typeof result.net_income === 'number' && !isNaN(result.net_income) ? result.net_income : 0
+      };
+      
+      setData(cleanedData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -85,19 +106,31 @@ const IncomeStatementPage: React.FC = () => {
     fetchIncomeStatement(startDate, endDate);
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | null | undefined) => {
+    const validAmount = typeof amount === 'number' && !isNaN(amount) ? amount : 0;
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-    }).format(amount);
+    }).format(validAmount);
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+    if (!dateString) return 'N/A';
+    
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Invalid Date';
+      }
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    } catch (error) {
+      console.error('Date formatting error:', error);
+      return 'Invalid Date';
+    }
   };
 
   if (loading) {
@@ -181,7 +214,7 @@ const IncomeStatementPage: React.FC = () => {
           </div>
           {data && (
             <p className="text-gray-600">
-              For the period from {formatDate(data.start_date)} to {formatDate(data.end_date)}
+              For the period from {formatDate(data.period.start_date)} to {formatDate(data.period.end_date)}
             </p>
           )}
         </div>
@@ -197,9 +230,9 @@ const IncomeStatementPage: React.FC = () => {
                 {data.income.accounts.length > 0 ? (
                   <div className="space-y-2 mb-4">
                     {data.income.accounts.map((account) => (
-                      <div key={account.id} className="flex justify-between">
-                        <span className="text-gray-700">{account.name} ({account.code})</span>
-                        <span className="font-medium text-green-600">{formatCurrency(account.balance)}</span>
+                      <div key={`${account.account_code}-${account.account_name}`} className="flex justify-between">
+                        <span className="text-gray-700">{account.account_name} ({account.account_code})</span>
+                        <span className="font-medium text-green-600">{formatCurrency(account.amount)}</span>
                       </div>
                     ))}
                   </div>
@@ -222,9 +255,9 @@ const IncomeStatementPage: React.FC = () => {
                 {data.expenses.accounts.length > 0 ? (
                   <div className="space-y-2 mb-4">
                     {data.expenses.accounts.map((account) => (
-                      <div key={account.id} className="flex justify-between">
-                        <span className="text-gray-700">{account.name} ({account.code})</span>
-                        <span className="font-medium text-red-600">{formatCurrency(account.balance)}</span>
+                      <div key={`${account.account_code}-${account.account_name}`} className="flex justify-between">
+                        <span className="text-gray-700">{account.account_name} ({account.account_code})</span>
+                        <span className="font-medium text-red-600">{formatCurrency(account.amount)}</span>
                       </div>
                     ))}
                   </div>

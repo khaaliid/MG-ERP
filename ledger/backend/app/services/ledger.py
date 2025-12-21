@@ -945,7 +945,12 @@ async def generate_income_statement(db: AsyncSession, start_date: datetime, end_
             # Income accounts have normal credit balance
             balance = credit_total - debit_total
             if balance != 0:
+                # Include compatibility fields for frontend
                 income_accounts.append({
+                    'id': row.id,
+                    'name': row.name,
+                    'code': row.code,
+                    'balance': float(balance),
                     'account_code': row.code,
                     'account_name': row.name,
                     'amount': float(balance)
@@ -956,7 +961,12 @@ async def generate_income_statement(db: AsyncSession, start_date: datetime, end_
             # Expense accounts have normal debit balance
             balance = debit_total - credit_total
             if balance != 0:
+                # Include compatibility fields for frontend
                 expense_accounts.append({
+                    'id': row.id,
+                    'name': row.name,
+                    'code': row.code,
+                    'balance': float(balance),
                     'account_code': row.code,
                     'account_name': row.name,
                     'amount': float(balance)
@@ -971,6 +981,9 @@ async def generate_income_statement(db: AsyncSession, start_date: datetime, end_
             'start_date': start_date.isoformat(),
             'end_date': end_date.isoformat()
         },
+        # Top-level fields for compatibility with existing frontend
+        'start_date': start_date.isoformat(),
+        'end_date': end_date.isoformat(),
         'income': {
             'accounts': income_accounts,
             'total': float(total_income)
