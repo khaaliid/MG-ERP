@@ -2,6 +2,7 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:15
+    pull_policy: always
     restart: unless-stopped
     environment:
       POSTGRES_USER: mguser
@@ -21,6 +22,7 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4
+    pull_policy: always
     restart: unless-stopped
     user: root
     environment:
@@ -40,6 +42,7 @@ services:
   # Auth Service
   auth:
     image: ghcr.io/khaaliid/mg-erp/mg-auth:latest
+    pull_policy: always
     container_name: mg-erp-auth
     restart: unless-stopped
     env_file:
@@ -69,6 +72,7 @@ services:
   # Ledger Service
   ledger:
     image: ghcr.io/khaaliid/mg-erp/mg-ledger:latest
+    pull_policy: always
     container_name: mg-erp-ledger
     restart: unless-stopped
     env_file:
@@ -98,6 +102,7 @@ services:
   # Inventory Service
   inventory:
     image: ghcr.io/khaaliid/mg-erp/mg-inventory:latest
+    pull_policy: always
     container_name: mg-erp-inventory
     restart: unless-stopped
     env_file:
@@ -127,6 +132,7 @@ services:
   # POS Backend Service
   pos-backend:
     image: ghcr.io/khaaliid/mg-erp/mg-pos:latest
+    pull_policy: always
     container_name: mg-erp-pos-backend
     restart: unless-stopped
     env_file:
@@ -162,6 +168,7 @@ services:
   # POS Frontend
   pos-frontend:
     image: ghcr.io/khaaliid/mg-erp/mg-pos-frontend:latest
+    pull_policy: always
     container_name: mg-erp-pos-frontend
     restart: unless-stopped
     env_file:
@@ -186,6 +193,7 @@ services:
   # Auth Frontend
   auth-frontend:
     image: ghcr.io/khaaliid/mg-erp/mg-auth-frontend:latest
+    pull_policy: always
     container_name: mg-erp-auth-frontend
     restart: unless-stopped
     env_file:
@@ -205,6 +213,7 @@ services:
 
   ledger-frontend:
     image: ghcr.io/khaaliid/mg-erp/mg-ledger-frontend:latest
+    pull_policy: always
     container_name: mg-erp-ledger-frontend
     restart: unless-stopped
     environment:
@@ -227,6 +236,7 @@ services:
 
   inventory-frontend:
     image: ghcr.io/khaaliid/mg-erp/mg-inventory-frontend:latest
+    pull_policy: always
     container_name: mg-erp-inventory-frontend
     restart: unless-stopped
     env_file:
@@ -246,6 +256,7 @@ services:
 
   portal-frontend:
     image: ghcr.io/khaaliid/mg-erp/mg-portal-frontend:latest
+    pull_policy: always
     container_name: mg-erp-portal-frontend
     restart: unless-stopped
     env_file:
