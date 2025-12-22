@@ -8,6 +8,7 @@ $ModuleConfig = @{
     'inventory' = @{ Description = 'Inventory Management System' }
     'ledger'    = @{ Description = 'Ledger & Accounting System' }
     'pos'       = @{ Description = 'Point of Sale System' }
+    'portal'       = @{ Description = 'Main dashboard' }
 }
 
 # Function to check if a directory exists
