@@ -6,27 +6,30 @@ interface GeneralLedgerEntry {
   transaction_id: number;
   date: string;
   description: string;
-  debit_amount: number;
-  credit_amount: number;
+  reference?: string;
+  type: 'debit' | 'credit';
+  amount: number;
   running_balance: number;
 }
 
 interface GeneralLedgerAccount {
-  id: number;
-  name: string;
-  code: string;
-  type: string;
-  entries: GeneralLedgerEntry[];
-  opening_balance: number;
-  closing_balance: number;
+  account_id: number;
+  account_name: string;
+  account_code: string;
+  transactions: GeneralLedgerEntry[];
+  running_balance: number;
+  transaction_count: number;
 }
 
 interface GeneralLedgerData {
   report_type: string;
-  start_date?: string;
-  end_date?: string;
+  period: {
+    start_date: string;
+    end_date: string;
+  };
   account_filter?: number;
   accounts: GeneralLedgerAccount[];
+  summary: string;
 }
 
 const GeneralLedgerPage: React.FC = () => {
@@ -113,19 +116,27 @@ const GeneralLedgerPage: React.FC = () => {
     fetchGeneralLedger();
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | null | undefined) => {
+    const validAmount = typeof amount === 'number' && !isNaN(amount) ? amount : 0;
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-    }).format(amount);
+    }).format(validAmount);
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid Date';
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch {
+      return 'Invalid Date';
+    }
   };
 
   if (loading) {
@@ -233,8 +244,8 @@ const GeneralLedgerPage: React.FC = () => {
 
           {data && (
             <div className="text-sm text-gray-600 mb-4">
-              {data.start_date && data.end_date && (
-                <span>Period: {formatDate(data.start_date)} to {formatDate(data.end_date)} | </span>
+              {data.period?.start_date && data.period?.end_date && (
+                <span>Period: {formatDate(data.period.start_date)} to {formatDate(data.period.end_date)} | </span>
               )}
               {data.account_filter && (
                 <span>Account Filter: {availableAccounts.find(acc => acc.id === data.account_filter)?.name || 'Unknown'} | </span>
@@ -256,27 +267,27 @@ const GeneralLedgerPage: React.FC = () => {
               </div>
             ) : (
               data.accounts.map((account) => (
-                <div key={account.id} className="bg-white shadow-md rounded-lg overflow-hidden">
+                <div key={account.account_id} className="bg-white shadow-md rounded-lg overflow-hidden">
                   <div className="bg-blue-50 px-6 py-4 border-b border-gray-200">
                     <div className="flex justify-between items-center">
                       <div>
                         <h2 className="text-xl font-semibold text-gray-900">
-                          {account.name || 'Unknown Account'} ({account.code || 'N/A'})
+                          {account.account_name || 'Unknown Account'} ({account.account_code || 'N/A'})
                         </h2>
-                        <p className="text-sm text-gray-600 capitalize">
-                          Account Type: {account.type?.toLowerCase() || 'Unknown'}
+                        <p className="text-sm text-gray-600">
+                          {account.transaction_count} transaction(s)
                         </p>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm text-gray-600">Opening Balance</div>
+                        <div className="text-sm text-gray-600">Ending Balance</div>
                         <div className="text-lg font-semibold">
-                          {formatCurrency(account.opening_balance || 0)}
+                          {formatCurrency(account.running_balance || 0)}
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {(!account.entries || account.entries.length === 0) ? (
+                  {(!account.transactions || account.transactions.length === 0) ? (
                     <div className="p-6 text-center text-gray-500">
                       No transactions found for this account
                     </div>
@@ -306,7 +317,7 @@ const GeneralLedgerPage: React.FC = () => {
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                          {account.entries?.map((entry, index) => (
+                          {account.transactions?.map((entry, index) => (
                             <tr key={`${entry.transaction_id}-${index}`} className="hover:bg-gray-50">
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 {formatDate(entry.date || '')}
@@ -315,18 +326,18 @@ const GeneralLedgerPage: React.FC = () => {
                                 {entry.description || 'No description'}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                                {(entry.debit_amount || 0) > 0 ? (
+                                {entry.type === 'debit' ? (
                                   <span className="text-green-600 font-medium">
-                                    {formatCurrency(entry.debit_amount || 0)}
+                                    {formatCurrency(entry.amount || 0)}
                                   </span>
                                 ) : (
                                   <span className="text-gray-400">-</span>
                                 )}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                                {(entry.credit_amount || 0) > 0 ? (
+                                {entry.type === 'credit' ? (
                                   <span className="text-red-600 font-medium">
-                                    {formatCurrency(entry.credit_amount || 0)}
+                                    {formatCurrency(entry.amount || 0)}
                                   </span>
                                 ) : (
                                   <span className="text-gray-400">-</span>
@@ -348,10 +359,10 @@ const GeneralLedgerPage: React.FC = () => {
                   <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium text-gray-700">
-                        Closing Balance:
+                        Ending Balance:
                       </span>
                       <span className="text-lg font-semibold">
-                        {formatCurrency(account.closing_balance || 0)}
+                        {formatCurrency(account.running_balance || 0)}
                       </span>
                     </div>
                   </div>

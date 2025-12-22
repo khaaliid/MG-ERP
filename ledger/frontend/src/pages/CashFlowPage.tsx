@@ -84,19 +84,27 @@ const CashFlowPage: React.FC = () => {
     fetchCashFlow(startDate, endDate);
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | null | undefined) => {
+    const validAmount = typeof amount === 'number' && !isNaN(amount) ? amount : 0;
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-    }).format(amount);
+    }).format(validAmount);
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+    if (!dateString) return 'N/A';
+    try {
+      const d = new Date(dateString);
+      if (isNaN(d.getTime())) return 'Invalid Date';
+      return d.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    } catch {
+      return 'Invalid Date';
+    }
   };
 
   if (loading) {
@@ -283,70 +291,81 @@ const CashFlowPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Detailed Cash Flow Table */}
+              {/* Detailed Cash Movements */}
               {data.cash_flows.length > 0 ? (
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900 mb-4">Cash Flow by Account</h2>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-4">Cash Movements</h2>
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Date
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Description
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Account
                           </th>
-                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Cash Inflows
+                          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Type
                           </th>
                           <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Cash Outflows
+                            Inflow
                           </th>
                           <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Net Cash Flow
+                            Outflow
+                          </th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Net
                           </th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {data.cash_flows.map((flow) => (
-                          <tr key={flow.account_id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900">
-                                {flow.account_name}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                Code: {flow.account_code}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                              {flow.cash_inflows > 0 ? (
-                                <span className="text-green-600 font-medium">
-                                  {formatCurrency(flow.cash_inflows)}
-                                </span>
-                              ) : (
-                                <span className="text-gray-400">-</span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                              {flow.cash_outflows > 0 ? (
-                                <span className="text-red-600 font-medium">
-                                  {formatCurrency(flow.cash_outflows)}
-                                </span>
-                              ) : (
-                                <span className="text-gray-400">-</span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                              <span className={`font-medium ${
-                                flow.net_cash_flow >= 0 ? 'text-blue-600' : 'text-orange-600'
-                              }`}>
-                                {formatCurrency(flow.net_cash_flow)}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
+                        {data.cash_flows.map((flow, idx) => {
+                          const isInflow = flow.type === 'Inflow';
+                          const inflowAmt = isInflow ? flow.amount : 0;
+                          const outflowAmt = !isInflow ? flow.amount : 0;
+                          const netAmt = isInflow ? flow.amount : -flow.amount;
+                          return (
+                            <tr key={`${flow.date}-${idx}`} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {formatDate(flow.date)}
+                              </td>
+                              <td className="px-6 py-4 text-sm text-gray-900">
+                                {flow.description || '—'}
+                              </td>
+                              <td className="px-6 py-4 text-sm text-gray-700">
+                                {flow.account}
+                              </td>
+                              <td className="px-6 py-4 text-center text-sm">
+                                <span className={`px-2 py-1 rounded ${isInflow ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{flow.type}</span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                                {inflowAmt ? (
+                                  <span className="text-green-600 font-medium">{formatCurrency(inflowAmt)}</span>
+                                ) : (
+                                  <span className="text-gray-400">-</span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                                {outflowAmt ? (
+                                  <span className="text-red-600 font-medium">{formatCurrency(outflowAmt)}</span>
+                                ) : (
+                                  <span className="text-gray-400">-</span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                                <span className={`font-medium ${netAmt >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>{formatCurrency(netAmt)}</span>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                       <tfoot className="bg-gray-50">
                         <tr className="font-semibold">
-                          <td className="px-6 py-4 text-sm text-gray-900">
+                          <td className="px-6 py-4 text-sm text-gray-900" colSpan={4}>
                             Total
                           </td>
                           <td className="px-6 py-4 text-sm text-right text-green-600">
