@@ -19,15 +19,39 @@ const modules = [
 const Modules: React.FC = () => {
   const { user, logout } = useAuth()
   const token = localStorage.getItem('auth_token') || ''
+  
+  const isTokenExpired = (jwt: string): boolean => {
+    if (!jwt) return true
+    try {
+      const [, payload] = jwt.split('.')
+      if (!payload) return true
+      const decoded = JSON.parse(atob(payload))
+      const expSec = decoded.exp
+      if (!expSec) return true
+      return expSec * 1000 <= Date.now()
+    } catch {
+      return true
+    }
+  }
+  
   const appendToken = (url: string) => {
     try {
       const u = new URL(url)
-      if (token) {
+      if (token && !isTokenExpired(token)) {
         u.searchParams.set('sso_token', token)
       }
       return u.toString()
     } catch {
       return url
+    }
+  }
+  
+  const handleModuleClick = (e: React.MouseEvent<HTMLAnchorElement>, url: string) => {
+    if (!token || isTokenExpired(token)) {
+      e.preventDefault()
+      alert('Your session has expired. Please login again.')
+      logout()
+      return
     }
   }
   return (
@@ -41,7 +65,14 @@ const Modules: React.FC = () => {
       </div>
       <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:16}}>
         {modules.map(m => (
-          <a key={m.key} href={appendToken(m.url)} style={{textDecoration:'none'}} target="_blank" rel="noreferrer">
+          <a 
+            key={m.key} 
+            href={appendToken(m.url)} 
+            onClick={(e) => handleModuleClick(e, m.url)}
+            style={{textDecoration:'none'}} 
+            target="_blank" 
+            rel="noreferrer"
+          >
             <div style={{border:'1px solid #ddd', borderRadius:8, padding:16, background:'#fff', textAlign:'center'}}>
               <div style={{fontSize:48}}>{m.icon}</div>
               <div style={{marginTop:8, color:'#333'}}>{m.name}</div>
