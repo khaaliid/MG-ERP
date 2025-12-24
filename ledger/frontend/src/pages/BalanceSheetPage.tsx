@@ -196,7 +196,7 @@ const BalanceSheetPage: React.FC = () => {
               </div>
               <div className="p-6">
                 {/* Current Assets */}
-                {data.assets.current_assets.length > 0 && (
+                {data.assets?.current_assets && data.assets.current_assets.length > 0 && (
                   <div className="mb-6">
                     <h3 className="text-lg font-medium text-gray-800 mb-3">Current Assets</h3>
                     <div className="space-y-2">
@@ -211,7 +211,7 @@ const BalanceSheetPage: React.FC = () => {
                 )}
 
                 {/* Non-Current Assets */}
-                {data.assets.non_current_assets.length > 0 && (
+                {data.assets?.non_current_assets && data.assets.non_current_assets.length > 0 && (
                   <div className="mb-6">
                     <h3 className="text-lg font-medium text-gray-800 mb-3">Non-Current Assets</h3>
                     <div className="space-y-2">
@@ -228,7 +228,7 @@ const BalanceSheetPage: React.FC = () => {
                 <div className="border-t pt-4 mt-4">
                   <div className="flex justify-between text-lg font-semibold">
                     <span>Total Assets</span>
-                    <span className="text-blue-600">{formatCurrency(data.assets.total)}</span>
+                    <span className="text-blue-600">{formatCurrency(data.assets?.total || 0)}</span>
                   </div>
                 </div>
               </div>
@@ -241,7 +241,7 @@ const BalanceSheetPage: React.FC = () => {
               </div>
               <div className="p-6">
                 {/* Current Liabilities */}
-                {data.liabilities.current_liabilities.length > 0 && (
+                {data.liabilities?.current_liabilities && data.liabilities.current_liabilities.length > 0 && (
                   <div className="mb-6">
                     <h3 className="text-lg font-medium text-gray-800 mb-3">Current Liabilities</h3>
                     <div className="space-y-2">
@@ -256,7 +256,7 @@ const BalanceSheetPage: React.FC = () => {
                 )}
 
                 {/* Non-Current Liabilities */}
-                {data.liabilities.non_current_liabilities.length > 0 && (
+                {data.liabilities?.non_current_liabilities && data.liabilities.non_current_liabilities.length > 0 && (
                   <div className="mb-6">
                     <h3 className="text-lg font-medium text-gray-800 mb-3">Non-Current Liabilities</h3>
                     <div className="space-y-2">
@@ -270,7 +270,7 @@ const BalanceSheetPage: React.FC = () => {
                   </div>
                 )}
 
-                {data.liabilities.total > 0 && (
+                {data.liabilities?.total && data.liabilities.total > 0 && (
                   <div className="border-t pt-2 mb-6">
                     <div className="flex justify-between font-medium">
                       <span>Total Liabilities</span>
@@ -283,23 +283,23 @@ const BalanceSheetPage: React.FC = () => {
                 <div className="mb-6">
                   <h3 className="text-lg font-medium text-gray-800 mb-3">Equity</h3>
                   <div className="space-y-2">
-                    {data.equity.equity_accounts.map((account) => (
+                    {(data.equity?.equity_accounts || []).map((account) => (
                       <div key={account.id} className="flex justify-between">
                         <span className="text-gray-700">{account.name} ({account.code})</span>
                         <span className="font-medium">{formatCurrency(account.balance)}</span>
                       </div>
                     ))}
-                    {data.equity.retained_earnings !== 0 && (
+                    {data.equity?.retained_earnings !== 0 && (
                       <div className="flex justify-between">
                         <span className="text-gray-700">Retained Earnings</span>
-                        <span className="font-medium">{formatCurrency(data.equity.retained_earnings)}</span>
+                        <span className="font-medium">{formatCurrency(data.equity?.retained_earnings || 0)}</span>
                       </div>
                     )}
                   </div>
                   <div className="border-t pt-2 mt-4">
                     <div className="flex justify-between font-medium">
                       <span>Total Equity</span>
-                      <span>{formatCurrency(data.equity.total)}</span>
+                      <span>{formatCurrency(data.equity?.total || 0)}</span>
                     </div>
                   </div>
                 </div>
@@ -307,7 +307,7 @@ const BalanceSheetPage: React.FC = () => {
                 <div className="border-t pt-4 mt-4">
                   <div className="flex justify-between text-lg font-semibold">
                     <span>Total Liabilities & Equity</span>
-                    <span className="text-green-600">{formatCurrency(data.totals.total_liabilities_equity)}</span>
+                    <span className="text-green-600">{formatCurrency(data.totals?.total_liabilities_equity || 0)}</span>
                   </div>
                 </div>
               </div>

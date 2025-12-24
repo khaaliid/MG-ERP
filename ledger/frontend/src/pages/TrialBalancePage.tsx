@@ -11,12 +11,19 @@ interface TrialBalanceItem {
   credit_balance: number;
 }
 
-interface TrialBalanceData {
-  accounts: TrialBalanceItem[];
+interface TrialBalanceTotals {
   total_debits: number;
   total_credits: number;
-  is_balanced: boolean;
+  difference: number;
+  balanced: boolean;
+}
+
+interface TrialBalanceData {
+  accounts: TrialBalanceItem[];
+  totals: TrialBalanceTotals;
   as_of_date: string;
+  report_type?: string;
+  summary?: string;
 }
 
 const TrialBalancePage: React.FC = () => {
@@ -102,11 +109,11 @@ const TrialBalancePage: React.FC = () => {
         {data && (
           <div className="bg-white rounded-lg shadow overflow-hidden">
             {/* Balance Status */}
-            <div className={`px-6 py-4 border-b ${data.is_balanced ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+            <div className={`px-6 py-4 border-b ${data.totals.balanced ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
               <div className="flex items-center">
-                <div className={`h-3 w-3 rounded-full mr-3 ${data.is_balanced ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <span className={`font-medium ${data.is_balanced ? 'text-green-800' : 'text-red-800'}`}>
-                  {data.is_balanced ? '✅ Books are in balance' : '❌ Books are out of balance'}
+                <div className={`h-3 w-3 rounded-full mr-3 ${data.totals.balanced ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <span className={`font-medium ${data.totals.balanced ? 'text-green-800' : 'text-red-800'}`}>
+                  {data.totals.balanced ? '✅ Books are in balance' : '❌ Books are out of balance'}
                 </span>
               </div>
             </div>
@@ -162,10 +169,10 @@ const TrialBalancePage: React.FC = () => {
                       TOTALS
                     </td>
                     <td className="px-6 py-4 text-right text-sm text-gray-900">
-                      ${data.total_debits.toFixed(2)}
+                      ${data.totals.total_debits.toFixed(2)}
                     </td>
                     <td className="px-6 py-4 text-right text-sm text-gray-900">
-                      ${data.total_credits.toFixed(2)}
+                      ${data.totals.total_credits.toFixed(2)}
                     </td>
                   </tr>
                 </tfoot>

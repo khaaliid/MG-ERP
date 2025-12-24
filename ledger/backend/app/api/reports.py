@@ -42,7 +42,12 @@ async def get_trial_balance(
 ):
     """Generate Trial Balance report."""
     logger.info(f"[REPORT] Trial Balance requested by user: {current_user.get('username')}")
-    logger.info(f"[DEBUG] User details: is_superuser={current_user.is_superuser}, role={current_user.role}, permissions={current_user.permissions}")
+    logger.info(
+        "[DEBUG] User details: is_superuser=%s, role=%s, permissions=%s",
+        current_user.get('is_superuser'),
+        current_user.get('role'),
+        current_user.get('permissions')
+    )
     
     try:
         # Parse date if provided
