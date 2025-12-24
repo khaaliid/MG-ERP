@@ -16,7 +16,6 @@ const Header: React.FC<HeaderProps> = ({ title = 'POS System' }) => {
   const location = useLocation();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
   const [showSearch, setShowSearch] = useState(false);
 
   // Update time every second
