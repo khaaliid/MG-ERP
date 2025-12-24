@@ -135,7 +135,7 @@ const IncomeStatementPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Layout currentPage="reports" currentReport="income-statement">
+      <Layout currentPage="reports">
         <div className="p-8">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
@@ -150,7 +150,7 @@ const IncomeStatementPage: React.FC = () => {
 
   if (error) {
     return (
-      <Layout currentPage="reports" currentReport="income-statement">
+      <Layout currentPage="reports">
         <div className="p-8">
           <div className="bg-red-50 border border-red-200 rounded-md p-4">
             <div className="flex">
@@ -174,7 +174,7 @@ const IncomeStatementPage: React.FC = () => {
   }
 
   return (
-    <Layout currentPage="reports" currentReport="income-statement">
+    <Layout currentPage="reports">
       <div className="p-8">
         <div className="mb-6">
           <div className="flex justify-between items-center mb-4">

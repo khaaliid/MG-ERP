@@ -3,7 +3,7 @@ import Layout from '../components/Layout';
 
 const AgingReportPage: React.FC = () => {
   return (
-    <Layout currentPage="reports" currentReport="aging">
+    <Layout currentPage="reports">
       <div className="p-8">
         <div className="bg-white shadow-md rounded-lg p-8">
           <div className="text-center">
