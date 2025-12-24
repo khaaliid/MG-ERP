@@ -113,6 +113,13 @@ class APIService {
     this.baseURL = baseURL;
     this.authURL = authURL;
     this.loadTokenFromStorage();
+    
+    // Log configuration for debugging
+    console.log('APIService initialized:', {
+      baseURL: this.baseURL,
+      authURL: this.authURL,
+      hasToken: !!this.token
+    });
   }
 
   private loadTokenFromStorage(): void {
@@ -207,7 +214,7 @@ class APIService {
   // Authentication APIs
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     // Convert username to email format if needed (for compatibility with auth service)
-    const email = credentials.username.includes('@') ? credentials.username : `${credentials.username}@mg-erp.com`;
+    const email = credentials.username.includes('@') ? credentials.username : `${credentials.username}@mg.com`;
     
     const loginData = {
       email: email,
@@ -215,7 +222,14 @@ class APIService {
     };
 
     try {
-      const response = await fetch(`${this.authURL}/login`, {
+      const loginUrl = `${this.authURL}/login`;
+      console.log('Login attempt:', {
+        url: loginUrl,
+        email: email,
+        authBaseURL: this.authURL
+      });
+      
+      const response = await fetch(loginUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
