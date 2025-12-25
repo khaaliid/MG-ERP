@@ -3,7 +3,7 @@
  * Main sales interface with product selection and cart functionality
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from 'react-router-dom';
 import { enhancedApiService, Product, Category } from "../services/enhancedApiService";
 import { useAuth } from "../contexts/AuthContext";
@@ -138,72 +138,44 @@ export default function POS() {
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [tendered, setTendered] = useState("");
+  const [isSyncingProducts, setIsSyncingProducts] = useState(false);
+  const [isSyncingCategories, setIsSyncingCategories] = useState(false);
+  const [productSyncMessage, setProductSyncMessage] = useState<string | null>(null);
+  const [categorySyncMessage, setCategorySyncMessage] = useState<string | null>(null);
 
-  // Load products and categories from backend
+  // Load only settings on initial load (skip products/categories for instant load)
   useEffect(() => {
     async function loadData() {
       try {
         setLoading(true);
         setError(null);
         
-        // Check backend health
-        await enhancedApiService.checkHealth();
+        const apiBase = (import.meta as any).env?.VITE_API_BASE_URL || '';
+        const token = localStorage.getItem('pos_auth_token') || '';
         
-        // Load products and categories in parallel
-        const [productsResponse, categoriesData] = await Promise.all([
-          enhancedApiService.getProducts(1, 100),
-          enhancedApiService.getCategories()
-        ]);
-        
-        // Validate products data
-        let products = Array.isArray(productsResponse?.data) ? productsResponse.data : [];
-        // Fallback: API might return raw array
-        if (products.length === 0 && Array.isArray(productsResponse as any)) {
-          products = productsResponse as any;
-        }
-        // Additional fallback: check common alternative keys
-        if (products.length === 0 && productsResponse && typeof productsResponse === 'object') {
-          const alt = (productsResponse as any).products || (productsResponse as any).items;
-          if (Array.isArray(alt)) products = alt;
-        }
-        console.log('Loaded products (normalized):', products);
-        
-        // Validate categories data  
-        const categories = Array.isArray(categoriesData) ? categoriesData : [];
-        console.log('Loaded categories:', categories);
-        
-        setProducts(products);
-        setCategories(categories);
-
-        // Load POS settings (tax and currency)
-        try {
-          const apiBase = (import.meta as any).env?.VITE_API_BASE_URL || '';
-          const token = localStorage.getItem('pos_auth_token') || '';
-          const resp = await fetch(`${apiBase}/settings/`, {
-            headers: {
-              'Authorization': token ? `Bearer ${token}` : '',
-              'Accept': 'application/json'
-            }
-          });
-          if (resp.ok) {
-            const s = await resp.json();
-            if (typeof s.tax_rate === 'number') {
-              setTaxPct(Math.round(s.tax_rate * 100));
-            }
-            if (typeof s.currency_code === 'string') {
-              setCurrencyCode(s.currency_code);
-            }
+        // Load only settings
+        const settingsResponse = await fetch(`${apiBase}/settings/`, {
+          headers: {
+            'Authorization': token ? `Bearer ${token}` : '',
+            'Accept': 'application/json'
           }
-        } catch (e) {
-          console.warn('Failed to load POS settings; using defaults');
+        }).catch(() => null);
+
+        // Load POS settings
+        if (settingsResponse?.ok) {
+          const s = await settingsResponse.json();
+          if (typeof s.tax_rate === 'number') {
+            setTaxPct(Math.round(s.tax_rate * 100));
+          }
+          if (typeof s.currency_code === 'string') {
+            setCurrencyCode(s.currency_code);
+          }
         }
         
       } catch (err) {
-        console.error('Error loading data:', err);
         const message = err instanceof Error ? err.message : 'Failed to load data';
         setError(message);
         if (message.toLowerCase().includes('authentication required') || message.toLowerCase().includes('invalid or expired token')) {
-          // Redirect to login when auth failed
           navigate('/login', { replace: true });
         }
       } finally {
@@ -214,9 +186,90 @@ export default function POS() {
     loadData();
   }, []);
 
+  async function handleSyncProducts() {
+    if (isSyncingProducts) return;
+    const authToken = localStorage.getItem('pos_auth_token');
+    if (!authToken) {
+      navigate('/login', { replace: true });
+      return;
+    }
+
+    try {
+      setIsSyncingProducts(true);
+      setProductSyncMessage(null);
+      const base = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8001/api/v1';
+      
+      const productsResp = await fetch(`${base}/products/sync`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!productsResp.ok) throw new Error('Product sync failed');
+      
+      const productsResult = await productsResp.json();
+      const productsSynced = productsResult?.synced ?? 0;
+      
+      setProductSyncMessage(`✓ ${productsSynced} products synced`);
+      
+      // Reload products from backend cache
+      try {
+        const refreshed = await enhancedApiService.getProducts(1, 100);
+        const refreshedProducts = Array.isArray(refreshed?.data) ? refreshed.data : Array.isArray(refreshed) ? (refreshed as any) : [];
+        setProducts(refreshedProducts);
+      } catch {}
+    } catch (e) {
+      setProductSyncMessage('✗ Product sync failed');
+    } finally {
+      setIsSyncingProducts(false);
+      setTimeout(() => setProductSyncMessage(null), 5000);
+    }
+  }
+
+  async function handleSyncCategories() {
+    if (isSyncingCategories) return;
+    const authToken = localStorage.getItem('pos_auth_token');
+    if (!authToken) {
+      navigate('/login', { replace: true });
+      return;
+    }
+
+    try {
+      setIsSyncingCategories(true);
+      setCategorySyncMessage(null);
+      const base = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8001/api/v1';
+      
+      const categoriesResp = await fetch(`${base}/products/categories/sync`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!categoriesResp.ok) throw new Error('Category sync failed');
+      
+      const categoriesResult = await categoriesResp.json();
+      const categoriesSynced = categoriesResult?.synced ?? 0;
+      
+      setCategorySyncMessage(`✓ ${categoriesSynced} categories synced`);
+      
+      // Reload categories from backend cache
+      try {
+        const refreshedCategories = await enhancedApiService.getCategories();
+        setCategories(Array.isArray(refreshedCategories) ? refreshedCategories : []);
+      } catch {}
+    } catch (e) {
+      setCategorySyncMessage('✗ Category sync failed');
+    } finally {
+      setIsSyncingCategories(false);
+      setTimeout(() => setCategorySyncMessage(null), 5000);
+    }
+  }
+
   function addToCart(product: Product) {
-    console.log('Adding product to cart:', product);
-    console.log('Product sizes:', product.sizes, 'Type:', typeof product.sizes);
     
     // Handle sizes safely - could be array of strings, array of objects, or undefined
     let size: string | null = null;
@@ -364,30 +417,34 @@ export default function POS() {
   }
 
   // Build categories list including "All"
-  const categoryOptions = ["All", ...categories.map(cat => cat.name)];
+  const categoryOptions = useMemo(() => 
+    ["All", ...categories.map(cat => cat.name)], 
+    [categories]
+  );
 
-  const filtered = products.filter((p) => {
-    // Safety check for product object
-    if (!p || typeof p !== 'object') return false;
-    
-    if (category !== "All") {
-      // Filter by selected category
-      const productCategory = p.category?.name;
-      if (productCategory !== category) return false;
-    }
-    if (!filter) return true;
-    
-    // Safe string operations with fallbacks
-    const name = p.name || '';
-    const sku = p.sku || '';
-    const description = p.description || '';
-    
-    return (
-      name.toLowerCase().includes(filter.toLowerCase()) || 
-      sku.toLowerCase().includes(filter.toLowerCase()) ||
-      description.toLowerCase().includes(filter.toLowerCase())
-    );
-  });
+  const filtered = useMemo(() => 
+    products.filter((p) => {
+      if (!p || typeof p !== 'object') return false;
+      
+      if (category !== "All") {
+        const productCategory = p.category?.name;
+        if (productCategory !== category) return false;
+      }
+      if (!filter) return true;
+      
+      const searchLower = filter.toLowerCase();
+      const name = p.name || '';
+      const sku = p.sku || '';
+      const description = p.description || '';
+      
+      return (
+        name.toLowerCase().includes(searchLower) || 
+        sku.toLowerCase().includes(searchLower) ||
+        description.toLowerCase().includes(searchLower)
+      );
+    }),
+    [products, category, filter]
+  );
 
   if (loading) {
     return (
@@ -451,9 +508,45 @@ export default function POS() {
                   </option>
                 ))}
               </select>
+              <button
+                onClick={handleSyncProducts}
+                disabled={isSyncingProducts}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  isSyncingProducts ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
+                title="Sync products from inventory"
+              >
+                <svg className={`w-4 h-4 ${isSyncingProducts ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>{isSyncingProducts ? 'Syncing...' : 'Sync Products'}</span>
+              </button>
+              <button
+                onClick={handleSyncCategories}
+                disabled={isSyncingCategories}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  isSyncingCategories ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'
+                }`}
+                title="Sync categories from inventory"
+              >
+                <svg className={`w-4 h-4 ${isSyncingCategories ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>{isSyncingCategories ? 'Syncing...' : 'Sync Categories'}</span>
+              </button>
               <div className="text-sm text-gray-600">
                 {filtered.length} products
               </div>
+              {productSyncMessage && (
+                <div className={`px-3 py-1 rounded-lg text-sm font-medium ${productSyncMessage.startsWith('✓') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                  {productSyncMessage}
+                </div>
+              )}
+              {categorySyncMessage && (
+                <div className={`px-3 py-1 rounded-lg text-sm font-medium ${categorySyncMessage.startsWith('✓') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                  {categorySyncMessage}
+                </div>
+              )}
             </div>
 
             {/* Products Grid */}

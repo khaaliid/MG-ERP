@@ -15,14 +15,17 @@ from .config import (
     engine,
     POS_SCHEMA
 )
-from .localdb import Base, POSSettings  # Import POSSettings to register with metadata
+from .localdb import Base, POSSettings, Product, Category  # Ensure Category is registered in metadata
 from .routes.products import router as products_router
 from .routes.settings import router as settings_router
 from .routes.sales import router as sales_router
+from .services.product_sync_service import product_sync_service
 
 # Setup logging
 logging.basicConfig(level=getattr(logging, LOG_LEVEL.upper()))
 logger = logging.getLogger(__name__)
+
+# No background scheduler; sync is triggered via API from frontend
 
 # Create FastAPI app - POS System with local persistence
 app = FastAPI(
@@ -92,11 +95,19 @@ async def startup_event():
         
         # Step 2: Create tables
         async with engine.begin() as conn:
-            logger.info("[DATABASE] Creating tables...")
+            logger.info("[DATABASE] Creating tables in pos schema (sales, sale_items, settings, products, categories)...")
             await conn.run_sync(Base.metadata.create_all)
             await conn.execute(text(f"GRANT ALL ON ALL TABLES IN SCHEMA {POS_SCHEMA} TO mguser;"))
             await conn.execute(text(f"GRANT ALL ON ALL SEQUENCES IN SCHEMA {POS_SCHEMA} TO mguser;"))
-            logger.info("[SUCCESS] Tables created successfully")
+            logger.info("[SUCCESS] All tables created successfully including Product cache table")
+        
+        # Step 3: Product sync scheduler disabled
+        logger.info("[SCHEDULER] Product sync scheduler is disabled; use manual sync endpoint")
+        
+        # Step 4: Skip initial product sync (requires authentication)
+        # Users can manually trigger sync from UI or wait for hourly scheduled sync
+        logger.info("[INFO] Initial product sync skipped (requires authentication)")
+        logger.info("[INFO] Use 'Sync Products' button in POS UI or wait for hourly sync")
         
     except Exception as e:
         logger.error(f"[ERROR] Database initialization failed: {e}")
@@ -119,6 +130,12 @@ async def startup_event():
 async def shutdown_event():
     """Cleanup POS system."""
     logger.info("[SHUTDOWN] Stopping MG-ERP POS System...")
+    
+    # No scheduler to stop
+    
+    # Close HTTP clients
+    await product_sync_service.close()
+    
     await engine.dispose()
     logger.info("[DATABASE] Closed database connections")
     logger.info("[SUCCESS] MG-ERP POS System shutdown completed")

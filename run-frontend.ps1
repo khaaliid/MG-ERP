@@ -1,14 +1,17 @@
 param(
     [Parameter(Mandatory=$true)]
-    [string]$ModuleName
+    [string]$ModuleName,
+    
+    [Parameter(Mandatory=$false)]
+    [int]$Port = 0
 )
 
-# Module configuration map
+# Module configuration map with default ports
 $ModuleConfig = @{
-    'inventory' = @{ Description = 'Inventory Management System' }
-    'ledger'    = @{ Description = 'Ledger & Accounting System' }
-    'pos'       = @{ Description = 'Point of Sale System' }
-    'portal'       = @{ Description = 'Main dashboard' }
+    'inventory' = @{ Description = 'Inventory Management System'; Port = 3001 }
+    'ledger'    = @{ Description = 'Ledger & Accounting System';   Port = 3002 }
+    'pos'       = @{ Description = 'Point of Sale System';         Port = 3003 }
+    'portal'    = @{ Description = 'Main dashboard';               Port = 3000 }
 }
 
 # Function to check if a directory exists
@@ -47,7 +50,13 @@ if (-not $ModuleConfig.ContainsKey($ModuleName.ToLower())) {
 $ModuleName = $ModuleName.ToLower()
 $ModuleDescription = $ModuleConfig[$ModuleName].Description
 
+# Use provided port or module default
+if ($Port -eq 0) {
+    $Port = $ModuleConfig[$ModuleName].Port
+}
+
 Write-Host "Module: $ModuleDescription" -ForegroundColor Cyan
+Write-Host "Port: $Port" -ForegroundColor Cyan
 
 # Validate module directory exists
 if (-not (Test-DirectoryExists $ModuleDir)) {
@@ -95,12 +104,12 @@ if (Test-Path $ServicesEnv) {
 try {
     Write-Host "`nStarting Frontend Service..." -ForegroundColor Green
     Write-Host "Frontend Directory: $FrontendDir" -ForegroundColor Cyan
-    Write-Host "Frontend URL: http://localhost:5173" -ForegroundColor Blue
+    Write-Host "Frontend URL: http://localhost:$Port" -ForegroundColor Blue
     Write-Host "`nPress Ctrl+C to stop the frontend service" -ForegroundColor Yellow
     Write-Host "Starting npm dev server..." -ForegroundColor Green
     
     Set-Location $FrontendDir
-    npm run dev
+    npm run dev -- --port $Port --host
 } catch {
     Write-Host "Error: Failed to start frontend service: $($_.Exception.Message)" -ForegroundColor Red
     exit 1

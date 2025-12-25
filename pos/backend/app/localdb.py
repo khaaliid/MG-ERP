@@ -1,6 +1,6 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, func
 from sqlalchemy.orm import declarative_base, relationship
-from datetime import datetime
+from datetime import datetime, timezone
 import enum
 
 Base = declarative_base()
@@ -30,7 +30,7 @@ class Sale(Base):
     notes = Column(String, nullable=True)
     cashier = Column(String, nullable=True)
     cashier_id = Column(String, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False)
     status = Column(String, default="pending", nullable=False)
     ledger_entry_id = Column(String, nullable=True)  # Reference to ledger transaction
 
@@ -52,6 +52,35 @@ class SaleItem(Base):
     line_total = Column(Float, nullable=False)
 
     sale = relationship("Sale", back_populates="items")
+
+class Product(Base):
+    __tablename__ = "products"
+    __table_args__ = {'schema': SCHEMA_NAME}
+    
+    id = Column(String, primary_key=True)
+    sku = Column(String, index=True, nullable=False)
+    name = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    price = Column(Float, nullable=False)
+    cost_price = Column(Float, nullable=True)
+    stock_quantity = Column(Integer, default=0, nullable=False)
+    category_id = Column(String, nullable=True)
+    category_name = Column(String, nullable=True)
+    brand_id = Column(String, nullable=True)
+    brand_name = Column(String, nullable=True)
+    barcode = Column(String, nullable=True)
+    is_active = Column(String, default="true", nullable=False)  # "true" or "false"
+    synced_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc), nullable=False)
+
+class Category(Base):
+    __tablename__ = "categories"
+    __table_args__ = {'schema': SCHEMA_NAME}
+
+    id = Column(String, primary_key=True)
+    name = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    updated_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc), nullable=False)
 
 class POSSettings(Base):
     __tablename__ = "settings"

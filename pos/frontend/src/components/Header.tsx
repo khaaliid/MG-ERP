@@ -12,11 +12,13 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ title = 'POS System' }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, checkAuth } = useAuth();
   const location = useLocation();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Update time every second
   useEffect(() => {
@@ -47,6 +49,51 @@ const Header: React.FC<HeaderProps> = ({ title = 'POS System' }) => {
   const handleLogout = () => {
     logout();
     setShowUserMenu(false);
+  };
+
+  const handleSyncProducts = async () => {
+    if (isSyncing) return;
+    
+    setIsSyncing(true);
+    setSyncMessage(null);
+    
+    try {
+      let authToken = localStorage.getItem('pos_auth_token');
+      if (!authToken) {
+        // Try to refresh auth state to load token
+        await checkAuth();
+        authToken = localStorage.getItem('pos_auth_token');
+      }
+
+      const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api/v1';
+      const response = await fetch(`${base}/products/sync`, {
+        method: 'POST',
+        headers: {
+          ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}),
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Sync failed');
+      }
+      
+      const result = await response.json();
+      setSyncMessage({ 
+        type: 'success', 
+        text: `✓ ${result.synced || 0} products synced` 
+      });
+      
+      setTimeout(() => setSyncMessage(null), 5000);
+    } catch (error) {
+      setSyncMessage({ 
+        type: 'error', 
+        text: '✗ Sync failed' 
+      });
+      setTimeout(() => setSyncMessage(null), 5000);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const getRoleColor = (role: string) => {
@@ -203,16 +250,51 @@ const Header: React.FC<HeaderProps> = ({ title = 'POS System' }) => {
           </div>
 
           {/* Center - Time and Date */}
-          <div className="hidden lg:flex items-center bg-gray-700 rounded-lg px-4 py-2">
-            <svg className="w-5 h-5 text-white mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div className="text-lg font-bold text-white">
-              {formatTime(currentTime)}
+          <div className="hidden lg:flex items-center space-x-3">
+            <div className="bg-gray-700 rounded-lg px-4 py-2 flex items-center">
+              <svg className="w-5 h-5 text-white mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="text-lg font-bold text-white">
+                {formatTime(currentTime)}
+              </div>
+              <div className="ml-3 text-sm text-gray-300">
+                {formatDate(currentTime)}
+              </div>
             </div>
-            <div className="ml-3 text-sm text-gray-300">
-              {formatDate(currentTime)}
-            </div>
+
+            {/* Sync Products Button */}
+            <button
+              onClick={handleSyncProducts}
+              disabled={isSyncing}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                isSyncing 
+                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+              title="Sync products from inventory"
+            >
+              <svg 
+                className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>{isSyncing ? 'Syncing...' : 'Sync Products'}</span>
+            </button>
+
+            {/* Sync Status Message */}
+            {syncMessage && (
+              <div className={`px-3 py-1 rounded-lg text-sm font-medium ${
+                syncMessage.type === 'success' 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-red-100 text-red-800'
+              }`}>
+                {syncMessage.text}
+              </div>
+            )}
           </div>
 
           {/* Right Side - User Menu */}
