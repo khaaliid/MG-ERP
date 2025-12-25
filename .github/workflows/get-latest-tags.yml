@@ -10,45 +10,61 @@ jobs:
       - name: Get latest tag for Auth
         id: auth_tag
         run: |
-          LATEST=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://ghcr.io/v2/${{ github.repository_owner }}/mg-erp-auth/tags/list" \
-            | jq -r '.tags[]' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://ghcr.io/v2/${{ github.repository_owner }}/mg-erp-auth/tags/list")
+          echo "Raw response: $RESPONSE"
+          LATEST=$(echo "$RESPONSE" | jq -r '.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+          if [ -z "$LATEST" ]; then
+            LATEST=$(echo "$RESPONSE" | jq -r '.tags[]? // empty' | grep -v "latest" | sort -V | tail -n 1)
+          fi
           echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
           echo "Auth: ${LATEST:-none}"
 
       - name: Get latest tag for Inventory
         id: inventory_tag
         run: |
-          LATEST=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://ghcr.io/v2/${{ github.repository_owner }}/mg-erp-inventory/tags/list" \
-            | jq -r '.tags[]' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://ghcr.io/v2/${{ github.repository_owner }}/mg-erp-inventory/tags/list")
+          LATEST=$(echo "$RESPONSE" | jq -r '.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+          if [ -z "$LATEST" ]; then
+            LATEST=$(echo "$RESPONSE" | jq -r '.tags[]? // empty' | grep -v "latest" | sort -V | tail -n 1)
+          fi
           echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
           echo "Inventory: ${LATEST:-none}"
 
       - name: Get latest tag for Ledger
         id: ledger_tag
         run: |
-          LATEST=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://ghcr.io/v2/${{ github.repository_owner }}/mg-erp-ledger/tags/list" \
-            | jq -r '.tags[]' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://ghcr.io/v2/${{ github.repository_owner }}/mg-erp-ledger/tags/list")
+          LATEST=$(echo "$RESPONSE" | jq -r '.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+          if [ -z "$LATEST" ]; then
+            LATEST=$(echo "$RESPONSE" | jq -r '.tags[]? // empty' | grep -v "latest" | sort -V | tail -n 1)
+          fi
           echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
           echo "Ledger: ${LATEST:-none}"
 
       - name: Get latest tag for POS
         id: pos_tag
         run: |
-          LATEST=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://ghcr.io/v2/${{ github.repository_owner }}/mg-erp-pos/tags/list" \
-            | jq -r '.tags[]' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://ghcr.io/v2/${{ github.repository_owner }}/mg-erp-pos/tags/list")
+          LATEST=$(echo "$RESPONSE" | jq -r '.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+          if [ -z "$LATEST" ]; then
+            LATEST=$(echo "$RESPONSE" | jq -r '.tags[]? // empty' | grep -v "latest" | sort -V | tail -n 1)
+          fi
           echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
           echo "POS: ${LATEST:-none}"
 
       - name: Get latest tag for Portal
         id: portal_tag
         run: |
-          LATEST=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://ghcr.io/v2/${{ github.repository_owner }}/mg-erp-portal/tags/list" \
-            | jq -r '.tags[]' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://ghcr.io/v2/${{ github.repository_owner }}/mg-erp-portal/tags/list")
+          LATEST=$(echo "$RESPONSE" | jq -r '.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+          if [ -z "$LATEST" ]; then
+            LATEST=$(echo "$RESPONSE" | jq -r '.tags[]? // empty' | grep -v "latest" | sort -V | tail -n 1)
+          fi
           echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
           echo "Portal: ${LATEST:-none}"
 
