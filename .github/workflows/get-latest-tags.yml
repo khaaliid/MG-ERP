@@ -16,7 +16,7 @@ jobs:
           RESPONSE=$(curl -s -w "\n%{http_code}" -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/user/packages/container/mg-erp%2Fmg-erp-auth/versions")
+            "https://api.github.com/user/packages/container/mg-erp%2Fmg-auth/versions")
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
           BODY=$(echo "$RESPONSE" | sed '$d')
           echo "Auth HTTP Code: $HTTP_CODE"
@@ -40,7 +40,7 @@ jobs:
           RESPONSE=$(curl -s -w "\n%{http_code}" -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/users/${{ github.repository_owner }}/packages/container/mg-erp%2mg-erp-inventory/versions")
+            "https://api.github.com/user/packages/container/mg-erp%2Fmg-inventory/versions")
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
           BODY=$(echo "$RESPONSE" | sed '$d')
           echo "Inventory HTTP Code: $HTTP_CODE"
@@ -64,7 +64,7 @@ jobs:
           RESPONSE=$(curl -s -w "\n%{http_code}" -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/users/${{ github.repository_owner }}/packages/container/mg-erp-ledger/versions")
+            "https://api.github.com/user/packages/container/mg-erp%2Fmg-ledger/versions")
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
           BODY=$(echo "$RESPONSE" | sed '$d')
           echo "Ledger HTTP Code: $HTTP_CODE"
@@ -88,7 +88,7 @@ jobs:
           RESPONSE=$(curl -s -w "\n%{http_code}" -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/users/${{ github.repository_owner }}/packages/container/mg-erp-pos/versions")
+            "https://api.github.com/user/packages/container/mg-erp%2Fmg-pos/versions")
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
           BODY=$(echo "$RESPONSE" | sed '$d')
           echo "POS HTTP Code: $HTTP_CODE"
@@ -112,7 +112,7 @@ jobs:
           RESPONSE=$(curl -s -w "\n%{http_code}" -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/users/${{ github.repository_owner }}/packages/container/mg-erp-portal/versions")
+            "https://api.github.com/user/packages/container/mg-erp%2Fmg-portal-frontend/versions")
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
           BODY=$(echo "$RESPONSE" | sed '$d')
           echo "Portal HTTP Code: $HTTP_CODE"
@@ -136,19 +136,19 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Service | Image | Tag |" >> $GITHUB_STEP_SUMMARY
           echo "|---------|-------|-----|" >> $GITHUB_STEP_SUMMARY
-          echo "| Auth | ghcr.io/${{ github.repository_owner }}/mg-erp-auth | ${{ steps.auth_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Inventory | ghcr.io/${{ github.repository_owner }}/mg-erp-inventory | ${{ steps.inventory_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Ledger | ghcr.io/${{ github.repository_owner }}/mg-erp-ledger | ${{ steps.ledger_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| POS | ghcr.io/${{ github.repository_owner }}/mg-erp-pos | ${{ steps.pos_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Portal | ghcr.io/${{ github.repository_owner }}/mg-erp-portal | ${{ steps.portal_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Auth | ghcr.io/${{ github.repository_owner }}/mg-erp/mg-auth | ${{ steps.auth_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Inventory | ghcr.io/${{ github.repository_owner }}/mg-erp/mg-inventory | ${{ steps.inventory_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Ledger | ghcr.io/${{ github.repository_owner }}/mg-erp/mg-ledger | ${{ steps.ledger_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| POS | ghcr.io/${{ github.repository_owner }}/mg-erp/mg-pos | ${{ steps.pos_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Portal | ghcr.io/${{ github.repository_owner }}/mg-erp/mg-portal-frontend | ${{ steps.portal_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## Pull Commands" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ghcr.io/${{ github.repository_owner }}/mg-erp-auth:${{ steps.auth_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ghcr.io/${{ github.repository_owner }}/mg-erp-inventory:${{ steps.inventory_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ghcr.io/${{ github.repository_owner }}/mg-erp-ledger:${{ steps.ledger_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ghcr.io/${{ github.repository_owner }}/mg-erp-pos:${{ steps.pos_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ghcr.io/${{ github.repository_owner }}/mg-erp-portal:${{ steps.portal_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ghcr.io/${{ github.repository_owner }}/mg-erp/mg-auth:${{ steps.auth_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ghcr.io/${{ github.repository_owner }}/mg-erp/mg-inventory:${{ steps.inventory_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ghcr.io/${{ github.repository_owner }}/mg-erp/mg-ledger:${{ steps.ledger_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ghcr.io/${{ github.repository_owner }}/mg-erp/mg-pos:${{ steps.pos_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ghcr.io/${{ github.repository_owner }}/mg-erp/mg-portal-frontend:${{ steps.portal_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Create artifacts
