@@ -6,16 +6,21 @@ on:
 jobs:
   get-latest-tags:
     runs-on: ubuntu-latest
+    permissions:
+      packages: read
+      contents: read
     steps:
       - name: Get latest tag for Auth
         id: auth_tag
         run: |
-          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://ghcr.io/v2/${{ github.repository_owner }}/mg-erp-auth/tags/list")
+          RESPONSE=$(curl -s -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/users/${{ github.repository_owner }}/packages/container/mg-erp-auth/versions")
           echo "Raw response: $RESPONSE"
-          LATEST=$(echo "$RESPONSE" | jq -r '.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+          LATEST=$(echo "$RESPONSE" | jq -r '.[].metadata.container.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
           if [ -z "$LATEST" ]; then
-            LATEST=$(echo "$RESPONSE" | jq -r '.tags[]? // empty' | grep -v "latest" | sort -V | tail -n 1)
+            LATEST=$(echo "$RESPONSE" | jq -r '.[].metadata.container.tags[0]? // empty' | grep -v "latest" | head -n 1)
           fi
           echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
           echo "Auth: ${LATEST:-none}"
@@ -23,11 +28,13 @@ jobs:
       - name: Get latest tag for Inventory
         id: inventory_tag
         run: |
-          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://ghcr.io/v2/${{ github.repository_owner }}/mg-erp-inventory/tags/list")
-          LATEST=$(echo "$RESPONSE" | jq -r '.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+          RESPONSE=$(curl -s -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/users/${{ github.repository_owner }}/packages/container/mg-erp-inventory/versions")
+          LATEST=$(echo "$RESPONSE" | jq -r '.[].metadata.container.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
           if [ -z "$LATEST" ]; then
-            LATEST=$(echo "$RESPONSE" | jq -r '.tags[]? // empty' | grep -v "latest" | sort -V | tail -n 1)
+            LATEST=$(echo "$RESPONSE" | jq -r '.[].metadata.container.tags[0]? // empty' | grep -v "latest" | head -n 1)
           fi
           echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
           echo "Inventory: ${LATEST:-none}"
@@ -35,11 +42,13 @@ jobs:
       - name: Get latest tag for Ledger
         id: ledger_tag
         run: |
-          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://ghcr.io/v2/${{ github.repository_owner }}/mg-erp-ledger/tags/list")
-          LATEST=$(echo "$RESPONSE" | jq -r '.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+          RESPONSE=$(curl -s -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/users/${{ github.repository_owner }}/packages/container/mg-erp-ledger/versions")
+          LATEST=$(echo "$RESPONSE" | jq -r '.[].metadata.container.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
           if [ -z "$LATEST" ]; then
-            LATEST=$(echo "$RESPONSE" | jq -r '.tags[]? // empty' | grep -v "latest" | sort -V | tail -n 1)
+            LATEST=$(echo "$RESPONSE" | jq -r '.[].metadata.container.tags[0]? // empty' | grep -v "latest" | head -n 1)
           fi
           echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
           echo "Ledger: ${LATEST:-none}"
@@ -47,11 +56,13 @@ jobs:
       - name: Get latest tag for POS
         id: pos_tag
         run: |
-          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://ghcr.io/v2/${{ github.repository_owner }}/mg-erp-pos/tags/list")
-          LATEST=$(echo "$RESPONSE" | jq -r '.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+          RESPONSE=$(curl -s -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/users/${{ github.repository_owner }}/packages/container/mg-erp-pos/versions")
+          LATEST=$(echo "$RESPONSE" | jq -r '.[].metadata.container.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
           if [ -z "$LATEST" ]; then
-            LATEST=$(echo "$RESPONSE" | jq -r '.tags[]? // empty' | grep -v "latest" | sort -V | tail -n 1)
+            LATEST=$(echo "$RESPONSE" | jq -r '.[].metadata.container.tags[0]? // empty' | grep -v "latest" | head -n 1)
           fi
           echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
           echo "POS: ${LATEST:-none}"
@@ -59,11 +70,13 @@ jobs:
       - name: Get latest tag for Portal
         id: portal_tag
         run: |
-          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://ghcr.io/v2/${{ github.repository_owner }}/mg-erp-portal/tags/list")
-          LATEST=$(echo "$RESPONSE" | jq -r '.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+          RESPONSE=$(curl -s -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/users/${{ github.repository_owner }}/packages/container/mg-erp-portal/versions")
+          LATEST=$(echo "$RESPONSE" | jq -r '.[].metadata.container.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
           if [ -z "$LATEST" ]; then
-            LATEST=$(echo "$RESPONSE" | jq -r '.tags[]? // empty' | grep -v "latest" | sort -V | tail -n 1)
+            LATEST=$(echo "$RESPONSE" | jq -r '.[].metadata.container.tags[0]? // empty' | grep -v "latest" | head -n 1)
           fi
           echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
           echo "Portal: ${LATEST:-none}"
