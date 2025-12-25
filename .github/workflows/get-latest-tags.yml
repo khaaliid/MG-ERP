@@ -19,6 +19,8 @@ jobs:
             "https://api.github.com/user/packages/container/mg-erp%2Fmg-erp-auth/versions")
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
           BODY=$(echo "$RESPONSE" | sed '$d')
+          echo "Auth HTTP Code: $HTTP_CODE"
+          echo "Auth Response Body: $BODY"
           
           if [ "$HTTP_CODE" = "404" ]; then
             echo "latest=not-published" >> $GITHUB_OUTPUT
@@ -41,6 +43,8 @@ jobs:
             "https://api.github.com/users/${{ github.repository_owner }}/packages/container/mg-erp-inventory/versions")
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
           BODY=$(echo "$RESPONSE" | sed '$d')
+          echo "Inventory HTTP Code: $HTTP_CODE"
+          echo "Inventory Response Body: $BODY"
           
           if [ "$HTTP_CODE" = "404" ]; then
             echo "latest=not-published" >> $GITHUB_OUTPUT
@@ -63,6 +67,8 @@ jobs:
             "https://api.github.com/users/${{ github.repository_owner }}/packages/container/mg-erp-ledger/versions")
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
           BODY=$(echo "$RESPONSE" | sed '$d')
+          echo "Ledger HTTP Code: $HTTP_CODE"
+          echo "Ledger Response Body: $BODY"
           
           if [ "$HTTP_CODE" = "404" ]; then
             echo "latest=not-published" >> $GITHUB_OUTPUT
@@ -85,6 +91,8 @@ jobs:
             "https://api.github.com/users/${{ github.repository_owner }}/packages/container/mg-erp-pos/versions")
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
           BODY=$(echo "$RESPONSE" | sed '$d')
+          echo "POS HTTP Code: $HTTP_CODE"
+          echo "POS Response Body: $BODY"
           
           if [ "$HTTP_CODE" = "404" ]; then
             echo "latest=not-published" >> $GITHUB_OUTPUT
@@ -107,6 +115,8 @@ jobs:
             "https://api.github.com/users/${{ github.repository_owner }}/packages/container/mg-erp-portal/versions")
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
           BODY=$(echo "$RESPONSE" | sed '$d')
+          echo "Portal HTTP Code: $HTTP_CODE"
+          echo "Portal Response Body: $BODY"
           
           if [ "$HTTP_CODE" = "404" ]; then
             echo "latest=not-published" >> $GITHUB_OUTPUT
