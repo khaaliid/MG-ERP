@@ -130,24 +130,136 @@ jobs:
             echo "Portal: ${LATEST:-none}"
           fi
 
+      - name: Get latest tag for Auth Frontend
+        id: auth_frontend_tag
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/user/packages/container/mg-erp%2Fmg-auth-frontend/versions")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          echo "Auth Frontend HTTP Code: $HTTP_CODE"
+          echo "Auth Frontend Response Body: $BODY"
+          
+          if [ "$HTTP_CODE" = "404" ]; then
+            echo "latest=not-published" >> $GITHUB_OUTPUT
+            echo "Auth Frontend: not-published"
+          else
+            LATEST=$(echo "$BODY" | jq -r '.[].metadata.container.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+            if [ -z "$LATEST" ]; then
+              LATEST=$(echo "$BODY" | jq -r '.[].metadata.container.tags[0]? // empty' | grep -v "latest" | head -n 1)
+            fi
+            echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
+            echo "Auth Frontend: ${LATEST:-none}"
+          fi
+
+      - name: Get latest tag for Ledger Frontend
+        id: ledger_frontend_tag
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/user/packages/container/mg-erp%2Fmg-ledger-frontend/versions")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          echo "Ledger Frontend HTTP Code: $HTTP_CODE"
+          echo "Ledger Frontend Response Body: $BODY"
+          
+          if [ "$HTTP_CODE" = "404" ]; then
+            echo "latest=not-published" >> $GITHUB_OUTPUT
+            echo "Ledger Frontend: not-published"
+          else
+            LATEST=$(echo "$BODY" | jq -r '.[].metadata.container.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+            if [ -z "$LATEST" ]; then
+              LATEST=$(echo "$BODY" | jq -r '.[].metadata.container.tags[0]? // empty' | grep -v "latest" | head -n 1)
+            fi
+            echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
+            echo "Ledger Frontend: ${LATEST:-none}"
+          fi
+
+      - name: Get latest tag for Inventory Frontend
+        id: inventory_frontend_tag
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/user/packages/container/mg-erp%2Fmg-inventory-frontend/versions")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          echo "Inventory Frontend HTTP Code: $HTTP_CODE"
+          echo "Inventory Frontend Response Body: $BODY"
+          
+          if [ "$HTTP_CODE" = "404" ]; then
+            echo "latest=not-published" >> $GITHUB_OUTPUT
+            echo "Inventory Frontend: not-published"
+          else
+            LATEST=$(echo "$BODY" | jq -r '.[].metadata.container.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+            if [ -z "$LATEST" ]; then
+              LATEST=$(echo "$BODY" | jq -r '.[].metadata.container.tags[0]? // empty' | grep -v "latest" | head -n 1)
+            fi
+            echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
+            echo "Inventory Frontend: ${LATEST:-none}"
+          fi
+
+      - name: Get latest tag for POS Frontend
+        id: pos_frontend_tag
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/user/packages/container/mg-erp%2Fmg-pos-frontend/versions")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          echo "POS Frontend HTTP Code: $HTTP_CODE"
+          echo "POS Frontend Response Body: $BODY"
+          
+          if [ "$HTTP_CODE" = "404" ]; then
+            echo "latest=not-published" >> $GITHUB_OUTPUT
+            echo "POS Frontend: not-published"
+          else
+            LATEST=$(echo "$BODY" | jq -r '.[].metadata.container.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+            if [ -z "$LATEST" ]; then
+              LATEST=$(echo "$BODY" | jq -r '.[].metadata.container.tags[0]? // empty' | grep -v "latest" | head -n 1)
+            fi
+            echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
+            echo "POS Frontend: ${LATEST:-none}"
+          fi
+
       - name: Summary
         run: |
           echo "# Latest GHCR Image Tags" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Backend Services" >> $GITHUB_STEP_SUMMARY
           echo "| Service | Image | Tag |" >> $GITHUB_STEP_SUMMARY
           echo "|---------|-------|-----|" >> $GITHUB_STEP_SUMMARY
           echo "| Auth | ghcr.io/${{ github.repository_owner }}/mg-erp/mg-auth | ${{ steps.auth_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Inventory | ghcr.io/${{ github.repository_owner }}/mg-erp/mg-inventory | ${{ steps.inventory_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Ledger | ghcr.io/${{ github.repository_owner }}/mg-erp/mg-ledger | ${{ steps.ledger_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
           echo "| POS | ghcr.io/${{ github.repository_owner }}/mg-erp/mg-pos | ${{ steps.pos_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Portal | ghcr.io/${{ github.repository_owner }}/mg-erp/mg-portal-frontend | ${{ steps.portal_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Frontend Services" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | Image | Tag |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| Auth Frontend | ghcr.io/${{ github.repository_owner }}/mg-erp/mg-auth-frontend | ${{ steps.auth_frontend_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Ledger Frontend | ghcr.io/${{ github.repository_owner }}/mg-erp/mg-ledger-frontend | ${{ steps.ledger_frontend_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Inventory Frontend | ghcr.io/${{ github.repository_owner }}/mg-erp/mg-inventory-frontend | ${{ steps.inventory_frontend_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| POS Frontend | ghcr.io/${{ github.repository_owner }}/mg-erp/mg-pos-frontend | ${{ steps.pos_frontend_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Portal Frontend | ghcr.io/${{ github.repository_owner }}/mg-erp/mg-portal-frontend | ${{ steps.portal_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## Pull Commands" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "# Backend Services" >> $GITHUB_STEP_SUMMARY
           echo "docker pull ghcr.io/${{ github.repository_owner }}/mg-erp/mg-auth:${{ steps.auth_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
           echo "docker pull ghcr.io/${{ github.repository_owner }}/mg-erp/mg-inventory:${{ steps.inventory_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
           echo "docker pull ghcr.io/${{ github.repository_owner }}/mg-erp/mg-ledger:${{ steps.ledger_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
           echo "docker pull ghcr.io/${{ github.repository_owner }}/mg-erp/mg-pos:${{ steps.pos_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Frontend Services" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ghcr.io/${{ github.repository_owner }}/mg-erp/mg-auth-frontend:${{ steps.auth_frontend_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ghcr.io/${{ github.repository_owner }}/mg-erp/mg-ledger-frontend:${{ steps.ledger_frontend_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ghcr.io/${{ github.repository_owner }}/mg-erp/mg-inventory-frontend:${{ steps.inventory_frontend_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ghcr.io/${{ github.repository_owner }}/mg-erp/mg-pos-frontend:${{ steps.pos_frontend_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
           echo "docker pull ghcr.io/${{ github.repository_owner }}/mg-erp/mg-portal-frontend:${{ steps.portal_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
 
@@ -160,7 +272,11 @@ jobs:
             "inventory": "${{ steps.inventory_tag.outputs.latest }}",
             "ledger": "${{ steps.ledger_tag.outputs.latest }}",
             "pos": "${{ steps.pos_tag.outputs.latest }}",
-            "portal": "${{ steps.portal_tag.outputs.latest }}"
+            "portal": "${{ steps.portal_tag.outputs.latest }}",
+            "auth_frontend": "${{ steps.auth_frontend_tag.outputs.latest }}",
+            "ledger_frontend": "${{ steps.ledger_frontend_tag.outputs.latest }}",
+            "inventory_frontend": "${{ steps.inventory_frontend_tag.outputs.latest }}",
+            "pos_frontend": "${{ steps.pos_frontend_tag.outputs.latest }}"
           }
           EOF
           cat > artifacts/tags.env << EOF
@@ -169,6 +285,10 @@ jobs:
           LEDGER_TAG=${{ steps.ledger_tag.outputs.latest }}
           POS_TAG=${{ steps.pos_tag.outputs.latest }}
           PORTAL_TAG=${{ steps.portal_tag.outputs.latest }}
+          AUTH_FRONTEND_TAG=${{ steps.auth_frontend_tag.outputs.latest }}
+          LEDGER_FRONTEND_TAG=${{ steps.ledger_frontend_tag.outputs.latest }}
+          INVENTORY_FRONTEND_TAG=${{ steps.inventory_frontend_tag.outputs.latest }}
+          POS_FRONTEND_TAG=${{ steps.pos_frontend_tag.outputs.latest }}
           EOF
 
       - name: Upload artifacts
