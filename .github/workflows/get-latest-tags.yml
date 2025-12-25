@@ -13,73 +13,112 @@ jobs:
       - name: Get latest tag for Auth
         id: auth_tag
         run: |
-          RESPONSE=$(curl -s -H "Accept: application/vnd.github+json" \
+          RESPONSE=$(curl -s -w "\n%{http_code}" -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "https://api.github.com/users/${{ github.repository_owner }}/packages/container/mg-erp-auth/versions")
-          echo "Raw response: $RESPONSE"
-          LATEST=$(echo "$RESPONSE" | jq -r '.[].metadata.container.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
-          if [ -z "$LATEST" ]; then
-            LATEST=$(echo "$RESPONSE" | jq -r '.[].metadata.container.tags[0]? // empty' | grep -v "latest" | head -n 1)
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          
+          if [ "$HTTP_CODE" = "404" ]; then
+            echo "latest=not-published" >> $GITHUB_OUTPUT
+            echo "Auth: not-published (image not in GHCR)"
+          else
+            LATEST=$(echo "$BODY" | jq -r '.[].metadata.container.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+            if [ -z "$LATEST" ]; then
+              LATEST=$(echo "$BODY" | jq -r '.[].metadata.container.tags[0]? // empty' | grep -v "latest" | head -n 1)
+            fi
+            echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
+            echo "Auth: ${LATEST:-none}"
           fi
-          echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
-          echo "Auth: ${LATEST:-none}"
 
       - name: Get latest tag for Inventory
         id: inventory_tag
         run: |
-          RESPONSE=$(curl -s -H "Accept: application/vnd.github+json" \
+          RESPONSE=$(curl -s -w "\n%{http_code}" -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "https://api.github.com/users/${{ github.repository_owner }}/packages/container/mg-erp-inventory/versions")
-          LATEST=$(echo "$RESPONSE" | jq -r '.[].metadata.container.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
-          if [ -z "$LATEST" ]; then
-            LATEST=$(echo "$RESPONSE" | jq -r '.[].metadata.container.tags[0]? // empty' | grep -v "latest" | head -n 1)
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          
+          if [ "$HTTP_CODE" = "404" ]; then
+            echo "latest=not-published" >> $GITHUB_OUTPUT
+            echo "Inventory: not-published"
+          else
+            LATEST=$(echo "$BODY" | jq -r '.[].metadata.container.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+            if [ -z "$LATEST" ]; then
+              LATEST=$(echo "$BODY" | jq -r '.[].metadata.container.tags[0]? // empty' | grep -v "latest" | head -n 1)
+            fi
+            echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
+            echo "Inventory: ${LATEST:-none}"
           fi
-          echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
-          echo "Inventory: ${LATEST:-none}"
 
       - name: Get latest tag for Ledger
         id: ledger_tag
         run: |
-          RESPONSE=$(curl -s -H "Accept: application/vnd.github+json" \
+          RESPONSE=$(curl -s -w "\n%{http_code}" -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "https://api.github.com/users/${{ github.repository_owner }}/packages/container/mg-erp-ledger/versions")
-          LATEST=$(echo "$RESPONSE" | jq -r '.[].metadata.container.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
-          if [ -z "$LATEST" ]; then
-            LATEST=$(echo "$RESPONSE" | jq -r '.[].metadata.container.tags[0]? // empty' | grep -v "latest" | head -n 1)
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          
+          if [ "$HTTP_CODE" = "404" ]; then
+            echo "latest=not-published" >> $GITHUB_OUTPUT
+            echo "Ledger: not-published"
+          else
+            LATEST=$(echo "$BODY" | jq -r '.[].metadata.container.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+            if [ -z "$LATEST" ]; then
+              LATEST=$(echo "$BODY" | jq -r '.[].metadata.container.tags[0]? // empty' | grep -v "latest" | head -n 1)
+            fi
+            echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
+            echo "Ledger: ${LATEST:-none}"
           fi
-          echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
-          echo "Ledger: ${LATEST:-none}"
 
       - name: Get latest tag for POS
         id: pos_tag
         run: |
-          RESPONSE=$(curl -s -H "Accept: application/vnd.github+json" \
+          RESPONSE=$(curl -s -w "\n%{http_code}" -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "https://api.github.com/users/${{ github.repository_owner }}/packages/container/mg-erp-pos/versions")
-          LATEST=$(echo "$RESPONSE" | jq -r '.[].metadata.container.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
-          if [ -z "$LATEST" ]; then
-            LATEST=$(echo "$RESPONSE" | jq -r '.[].metadata.container.tags[0]? // empty' | grep -v "latest" | head -n 1)
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          
+          if [ "$HTTP_CODE" = "404" ]; then
+            echo "latest=not-published" >> $GITHUB_OUTPUT
+            echo "POS: not-published"
+          else
+            LATEST=$(echo "$BODY" | jq -r '.[].metadata.container.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+            if [ -z "$LATEST" ]; then
+              LATEST=$(echo "$BODY" | jq -r '.[].metadata.container.tags[0]? // empty' | grep -v "latest" | head -n 1)
+            fi
+            echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
+            echo "POS: ${LATEST:-none}"
           fi
-          echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
-          echo "POS: ${LATEST:-none}"
 
       - name: Get latest tag for Portal
         id: portal_tag
         run: |
-          RESPONSE=$(curl -s -H "Accept: application/vnd.github+json" \
+          RESPONSE=$(curl -s -w "\n%{http_code}" -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "https://api.github.com/users/${{ github.repository_owner }}/packages/container/mg-erp-portal/versions")
-          LATEST=$(echo "$RESPONSE" | jq -r '.[].metadata.container.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
-          if [ -z "$LATEST" ]; then
-            LATEST=$(echo "$RESPONSE" | jq -r '.[].metadata.container.tags[0]? // empty' | grep -v "latest" | head -n 1)
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          
+          if [ "$HTTP_CODE" = "404" ]; then
+            echo "latest=not-published" >> $GITHUB_OUTPUT
+            echo "Portal: not-published"
+          else
+            LATEST=$(echo "$BODY" | jq -r '.[].metadata.container.tags[]? // empty' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+            if [ -z "$LATEST" ]; then
+              LATEST=$(echo "$BODY" | jq -r '.[].metadata.container.tags[0]? // empty' | grep -v "latest" | head -n 1)
+            fi
+            echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
+            echo "Portal: ${LATEST:-none}"
           fi
-          echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
-          echo "Portal: ${LATEST:-none}"
 
       - name: Summary
         run: |
