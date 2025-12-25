@@ -1,165 +1,101 @@
-name: Get Latest Docker Image Tags for All Apps
+name: Get Latest GHCR Image Tags
 
 on:
   workflow_dispatch:
-    inputs:
-      registry:
-        description: 'Docker registry (dockerhub, ghcr, or custom URL)'
-        required: true
-        default: 'dockerhub'
-        type: choice
-        options:
-          - dockerhub
-          - ghcr
-      repository_prefix:
-        description: 'Repository prefix (e.g., username or org name)'
-        required: true
-        type: string
 
 jobs:
-  get-latest-docker-tags:
+  get-latest-tags:
     runs-on: ubuntu-latest
     steps:
-      - name: Set registry URL
-        id: registry
-        run: |
-          if [ "${{ github.event.inputs.registry }}" == "ghcr" ]; then
-            echo "url=ghcr.io" >> $GITHUB_OUTPUT
-            echo "api_url=https://ghcr.io/v2" >> $GITHUB_OUTPUT
-          else
-            echo "url=docker.io" >> $GITHUB_OUTPUT
-            echo "api_url=https://registry-1.docker.io/v2" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Get latest Docker tag for Auth service
+      - name: Get latest tag for Auth
         id: auth_tag
         run: |
-          IMAGE="${{ github.event.inputs.repository_prefix }}/mg-erp-auth"
-          if [ "${{ github.event.inputs.registry }}" == "dockerhub" ]; then
-            LATEST=$(curl -s "https://registry.hub.docker.com/v2/repositories/${IMAGE}/tags?page_size=100" | jq -r '.results[].name' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
-          else
-            LATEST=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://ghcr.io/v2/${{ github.repository_owner }}/mg-erp-auth/tags/list" | jq -r '.tags[]' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
-          fi
+          LATEST=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://ghcr.io/v2/${{ github.repository_owner }}/mg-erp-auth/tags/list" \
+            | jq -r '.tags[]' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
           echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
-          echo "Auth latest: ${LATEST:-none}"
+          echo "Auth: ${LATEST:-none}"
 
-      - name: Get latest Docker tag for Inventory service
+      - name: Get latest tag for Inventory
         id: inventory_tag
         run: |
-          IMAGE="${{ github.event.inputs.repository_prefix }}/mg-erp-inventory"
-          if [ "${{ github.event.inputs.registry }}" == "dockerhub" ]; then
-            LATEST=$(curl -s "https://registry.hub.docker.com/v2/repositories/${IMAGE}/tags?page_size=100" | jq -r '.results[].name' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
-          else
-            LATEST=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://ghcr.io/v2/${{ github.repository_owner }}/mg-erp-inventory/tags/list" | jq -r '.tags[]' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
-          fi
+          LATEST=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://ghcr.io/v2/${{ github.repository_owner }}/mg-erp-inventory/tags/list" \
+            | jq -r '.tags[]' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
           echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
-          echo "Inventory latest: ${LATEST:-none}"
+          echo "Inventory: ${LATEST:-none}"
 
-      - name: Get latest Docker tag for Ledger service
+      - name: Get latest tag for Ledger
         id: ledger_tag
         run: |
-          IMAGE="${{ github.event.inputs.repository_prefix }}/mg-erp-ledger"
-          if [ "${{ github.event.inputs.registry }}" == "dockerhub" ]; then
-            LATEST=$(curl -s "https://registry.hub.docker.com/v2/repositories/${IMAGE}/tags?page_size=100" | jq -r '.results[].name' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
-          else
-            LATEST=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://ghcr.io/v2/${{ github.repository_owner }}/mg-erp-ledger/tags/list" | jq -r '.tags[]' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
-          fi
+          LATEST=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://ghcr.io/v2/${{ github.repository_owner }}/mg-erp-ledger/tags/list" \
+            | jq -r '.tags[]' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
           echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
-          echo "Ledger latest: ${LATEST:-none}"
+          echo "Ledger: ${LATEST:-none}"
 
-      - name: Get latest Docker tag for POS service
+      - name: Get latest tag for POS
         id: pos_tag
         run: |
-          IMAGE="${{ github.event.inputs.repository_prefix }}/mg-erp-pos"
-          if [ "${{ github.event.inputs.registry }}" == "dockerhub" ]; then
-            LATEST=$(curl -s "https://registry.hub.docker.com/v2/repositories/${IMAGE}/tags?page_size=100" | jq -r '.results[].name' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
-          else
-            LATEST=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://ghcr.io/v2/${{ github.repository_owner }}/mg-erp-pos/tags/list" | jq -r '.tags[]' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
-          fi
+          LATEST=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://ghcr.io/v2/${{ github.repository_owner }}/mg-erp-pos/tags/list" \
+            | jq -r '.tags[]' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
           echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
-          echo "POS latest: ${LATEST:-none}"
+          echo "POS: ${LATEST:-none}"
 
-      - name: Get latest Docker tag for Portal service
+      - name: Get latest tag for Portal
         id: portal_tag
         run: |
-          IMAGE="${{ github.event.inputs.repository_prefix }}/mg-erp-portal"
-          if [ "${{ github.event.inputs.registry }}" == "dockerhub" ]; then
-            LATEST=$(curl -s "https://registry.hub.docker.com/v2/repositories/${IMAGE}/tags?page_size=100" | jq -r '.results[].name' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
-          else
-            LATEST=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://ghcr.io/v2/${{ github.repository_owner }}/mg-erp-portal/tags/list" | jq -r '.tags[]' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
-          fi
+          LATEST=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://ghcr.io/v2/${{ github.repository_owner }}/mg-erp-portal/tags/list" \
+            | jq -r '.tags[]' | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
           echo "latest=${LATEST:-none}" >> $GITHUB_OUTPUT
-          echo "Portal latest: ${LATEST:-none}"
+          echo "Portal: ${LATEST:-none}"
 
-      - name: Summary of Latest Docker Image Tags
+      - name: Summary
         run: |
-          echo "# Latest Docker Image Tags" >> $GITHUB_STEP_SUMMARY
+          echo "# Latest GHCR Image Tags" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Registry:** ${{ github.event.inputs.registry }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Repository Prefix:** ${{ github.event.inputs.repository_prefix }}" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | Image | Tag |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| Auth | ghcr.io/${{ github.repository_owner }}/mg-erp-auth | ${{ steps.auth_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Inventory | ghcr.io/${{ github.repository_owner }}/mg-erp-inventory | ${{ steps.inventory_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Ledger | ghcr.io/${{ github.repository_owner }}/mg-erp-ledger | ${{ steps.ledger_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| POS | ghcr.io/${{ github.repository_owner }}/mg-erp-pos | ${{ steps.pos_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Portal | ghcr.io/${{ github.repository_owner }}/mg-erp-portal | ${{ steps.portal_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Service | Image | Latest Tag |" >> $GITHUB_STEP_SUMMARY
-          echo "|---------|-------|------------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Auth | ${{ github.event.inputs.repository_prefix }}/mg-erp-auth | ${{ steps.auth_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Inventory | ${{ github.event.inputs.repository_prefix }}/mg-erp-inventory | ${{ steps.inventory_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Ledger | ${{ github.event.inputs.repository_prefix }}/mg-erp-ledger | ${{ steps.ledger_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| POS | ${{ github.event.inputs.repository_prefix }}/mg-erp-pos | ${{ steps.pos_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Portal | ${{ github.event.inputs.repository_prefix }}/mg-erp-portal | ${{ steps.portal_tag.outputs.latest }} |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "---" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Docker Pull Commands:**" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Pull Commands" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ${{ steps.registry.outputs.url }}/${{ github.event.inputs.repository_prefix }}/mg-erp-auth:${{ steps.auth_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ${{ steps.registry.outputs.url }}/${{ github.event.inputs.repository_prefix }}/mg-erp-inventory:${{ steps.inventory_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ${{ steps.registry.outputs.url }}/${{ github.event.inputs.repository_prefix }}/mg-erp-ledger:${{ steps.ledger_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ${{ steps.registry.outputs.url }}/${{ github.event.inputs.repository_prefix }}/mg-erp-pos:${{ steps.pos_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ${{ steps.registry.outputs.url }}/${{ github.event.inputs.repository_prefix }}/mg-erp-portal:${{ steps.portal_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ghcr.io/${{ github.repository_owner }}/mg-erp-auth:${{ steps.auth_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ghcr.io/${{ github.repository_owner }}/mg-erp-inventory:${{ steps.inventory_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ghcr.io/${{ github.repository_owner }}/mg-erp-ledger:${{ steps.ledger_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ghcr.io/${{ github.repository_owner }}/mg-erp-pos:${{ steps.pos_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ghcr.io/${{ github.repository_owner }}/mg-erp-portal:${{ steps.portal_tag.outputs.latest }}" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
 
-      - name: Create artifact with Docker tag information
+      - name: Create artifacts
         run: |
           mkdir -p artifacts
-          cat > artifacts/latest-docker-tags.json << EOF
+          cat > artifacts/tags.json << EOF
           {
-            "registry": "${{ github.event.inputs.registry }}",
-            "registry_url": "${{ steps.registry.outputs.url }}",
-            "repository_prefix": "${{ github.event.inputs.repository_prefix }}",
-            "tags": {
-              "auth": "${{ steps.auth_tag.outputs.latest }}",
-              "inventory": "${{ steps.inventory_tag.outputs.latest }}",
-              "ledger": "${{ steps.ledger_tag.outputs.latest }}",
-              "pos": "${{ steps.pos_tag.outputs.latest }}",
-              "portal": "${{ steps.portal_tag.outputs.latest }}"
-            },
-            "images": {
-              "auth": "${{ steps.registry.outputs.url }}/${{ github.event.inputs.repository_prefix }}/mg-erp-auth:${{ steps.auth_tag.outputs.latest }}",
-              "inventory": "${{ steps.registry.outputs.url }}/${{ github.event.inputs.repository_prefix }}/mg-erp-inventory:${{ steps.inventory_tag.outputs.latest }}",
-              "ledger": "${{ steps.registry.outputs.url }}/${{ github.event.inputs.repository_prefix }}/mg-erp-ledger:${{ steps.ledger_tag.outputs.latest }}",
-              "pos": "${{ steps.registry.outputs.url }}/${{ github.event.inputs.repository_prefix }}/mg-erp-pos:${{ steps.pos_tag.outputs.latest }}",
-              "portal": "${{ steps.registry.outputs.url }}/${{ github.event.inputs.repository_prefix }}/mg-erp-portal:${{ steps.portal_tag.outputs.latest }}"
-            }
+            "auth": "${{ steps.auth_tag.outputs.latest }}",
+            "inventory": "${{ steps.inventory_tag.outputs.latest }}",
+            "ledger": "${{ steps.ledger_tag.outputs.latest }}",
+            "pos": "${{ steps.pos_tag.outputs.latest }}",
+            "portal": "${{ steps.portal_tag.outputs.latest }}"
           }
           EOF
-          cat > artifacts/latest-docker-tags.env << EOF
-          REGISTRY=${{ steps.registry.outputs.url }}
-          REPOSITORY_PREFIX=${{ github.event.inputs.repository_prefix }}
+          cat > artifacts/tags.env << EOF
           AUTH_TAG=${{ steps.auth_tag.outputs.latest }}
           INVENTORY_TAG=${{ steps.inventory_tag.outputs.latest }}
           LEDGER_TAG=${{ steps.ledger_tag.outputs.latest }}
           POS_TAG=${{ steps.pos_tag.outputs.latest }}
           PORTAL_TAG=${{ steps.portal_tag.outputs.latest }}
-          AUTH_IMAGE=${{ steps.registry.outputs.url }}/${{ github.event.inputs.repository_prefix }}/mg-erp-auth:${{ steps.auth_tag.outputs.latest }}
-          INVENTORY_IMAGE=${{ steps.registry.outputs.url }}/${{ github.event.inputs.repository_prefix }}/mg-erp-inventory:${{ steps.inventory_tag.outputs.latest }}
-          LEDGER_IMAGE=${{ steps.registry.outputs.url }}/${{ github.event.inputs.repository_prefix }}/mg-erp-ledger:${{ steps.ledger_tag.outputs.latest }}
-          POS_IMAGE=${{ steps.registry.outputs.url }}/${{ github.event.inputs.repository_prefix }}/mg-erp-pos:${{ steps.pos_tag.outputs.latest }}
-          PORTAL_IMAGE=${{ steps.registry.outputs.url }}/${{ github.event.inputs.repository_prefix }}/mg-erp-portal:${{ steps.portal_tag.outputs.latest }}
           EOF
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: latest-docker-tags
+          name: ghcr-tags
           path: artifacts/
           retention-days: 90
