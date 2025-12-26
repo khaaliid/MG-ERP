@@ -11,6 +11,15 @@ function formatEGP(v: number) {
   return `${v.toFixed(2)} EGP`;
 }
 
+function formatCurrency(v: number, currencyCode: string) {
+  const value = typeof v === 'number' && !isNaN(v) ? v : 0;
+  try {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: currencyCode || 'USD' }).format(value);
+  } catch {
+    return `${value.toFixed(2)} ${currencyCode || 'USD'}`;
+  }
+}
+
 const SalesHistory: React.FC = () => {
   const { user } = useAuth();
   const [sales, setSales] = useState<Sale[]>([]);
@@ -21,10 +30,65 @@ const SalesHistory: React.FC = () => {
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  
+  // POS Settings for receipt printing
+  const [currencyCode, setCurrencyCode] = useState('USD');
+  const [currencySymbol, setCurrencySymbol] = useState('$');
+  const [receiptHeader, setReceiptHeader] = useState<string>('');
+  const [receiptFooter, setReceiptFooter] = useState<string>('');
+  const [businessName, setBusinessName] = useState<string>('');
+  const [businessAddress, setBusinessAddress] = useState<string>('');
+  const [businessPhone, setBusinessPhone] = useState<string>('');
+  const [businessEmail, setBusinessEmail] = useState<string>('');
 
   useEffect(() => {
     fetchSales();
+    fetchSettings();
   }, [page, startDate, endDate]);
+
+  const fetchSettings = async () => {
+    try {
+      const apiBase = (import.meta as any).env?.VITE_API_BASE_URL || '';
+      const token = localStorage.getItem('pos_auth_token') || '';
+      
+      const settingsResponse = await fetch(`${apiBase}/settings/`, {
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+          'Accept': 'application/json'
+        }
+      }).catch(() => null);
+
+      if (settingsResponse?.ok) {
+        const s = await settingsResponse.json();
+        if (typeof s.currency_code === 'string') {
+          setCurrencyCode(s.currency_code);
+        }
+        if (typeof s.currency_symbol === 'string') {
+          setCurrencySymbol(s.currency_symbol);
+        }
+        if (typeof s.receipt_header === 'string') {
+          setReceiptHeader(s.receipt_header);
+        }
+        if (typeof s.receipt_footer === 'string') {
+          setReceiptFooter(s.receipt_footer);
+        }
+        if (typeof s.business_name === 'string') {
+          setBusinessName(s.business_name);
+        }
+        if (typeof s.business_address === 'string') {
+          setBusinessAddress(s.business_address);
+        }
+        if (typeof s.business_phone === 'string') {
+          setBusinessPhone(s.business_phone);
+        }
+        if (typeof s.business_email === 'string') {
+          setBusinessEmail(s.business_email);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load settings for receipt:', err);
+    }
+  };
 
   const fetchSales = async () => {
     try {
@@ -99,6 +163,105 @@ const SalesHistory: React.FC = () => {
       default:
         return method;
     }
+  };
+
+  const printReceipt = (sale: Sale) => {
+    const now = new Date();
+    const lines = sale.items.map(item => ({
+      name: item.product_id,
+      qty: item.quantity,
+      price: item.unit_price,
+      size: item.size || null,
+      total: item.quantity * item.unit_price
+    }));
+
+    const html = `<!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Receipt - ${sale.sale_number}</title>
+        <style>
+          body { font-family: Arial, sans-serif; width: 300px; margin: 0 auto; }
+          .center { text-align: center; }
+          .small { font-size: 12px; color: #444; }
+          .bold { font-weight: bold; }
+          .divider { border-top: 1px dashed #888; margin: 8px 0; }
+          table { width: 100%; border-collapse: collapse; }
+          td { padding: 4px 0; }
+          .totals td { padding: 6px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="center">
+          <div class="bold">${businessName || 'Store'}</div>
+          ${businessAddress ? `<div class="small">${businessAddress}</div>` : ''}
+          ${businessPhone ? `<div class="small">Tel: ${businessPhone}</div>` : ''}
+          ${businessEmail ? `<div class="small">${businessEmail}</div>` : ''}
+        </div>
+        ${receiptHeader ? `<div class="divider"></div><div class="small center">${receiptHeader}</div>` : ''}
+        <div class="divider"></div>
+        <div class="small">Sale #: ${sale.sale_number}</div>
+        <div class="small">Date: ${new Date(sale.created_at).toLocaleString()}</div>
+        ${sale.cashier ? `<div class="small">Cashier: ${sale.cashier}</div>` : ''}
+        ${sale.customer_name ? `<div class="small">Customer: ${sale.customer_name}</div>` : ''}
+        <div class="divider"></div>
+        <table>
+          ${lines.map(l => `
+            <tr>
+              <td>${l.name}${l.size ? ' (' + l.size + ')' : ''}</td>
+              <td class="small" style="text-align:right">${l.qty} x ${formatCurrency(l.price, currencyCode)}</td>
+            </tr>
+            <tr>
+              <td></td>
+              <td style="text-align:right" class="bold">${formatCurrency(l.total, currencyCode)}</td>
+            </tr>
+          `).join('')}
+        </table>
+        <div class="divider"></div>
+        <table class="totals">
+          <tr>
+            <td>Subtotal</td>
+            <td style="text-align:right">${formatCurrency(sale.subtotal, currencyCode)}</td>
+          </tr>
+          ${sale.discount_amount > 0 ? `
+          <tr>
+            <td>Discount</td>
+            <td style="text-align:right">${formatCurrency(sale.discount_amount, currencyCode)}</td>
+          </tr>` : ''}
+          <tr>
+            <td>Tax</td>
+            <td style="text-align:right">${formatCurrency(sale.tax_amount, currencyCode)}</td>
+          </tr>
+          <tr>
+            <td class="bold">Total</td>
+            <td style="text-align:right" class="bold">${formatCurrency(sale.total_amount, currencyCode)}</td>
+          </tr>
+          <tr>
+            <td>Method</td>
+            <td style="text-align:right">${sale.payment_method || 'Cash'}</td>
+          </tr>
+          ${sale.tendered_amount ? `
+          <tr>
+            <td>Tendered</td>
+            <td style="text-align:right">${formatCurrency(sale.tendered_amount, currencyCode)}</td>
+          </tr>
+          <tr>
+            <td>Change</td>
+            <td style="text-align:right">${formatCurrency(sale.change_amount || 0, currencyCode)}</td>
+          </tr>` : ''}
+        </table>
+        ${receiptFooter ? `<div class="divider"></div><div class="small center">${receiptFooter}</div>` : ''}
+      </body>
+      <script>
+        window.onload = function() { window.print(); setTimeout(() => window.close(), 500); };
+      </script>
+    </html>`;
+
+    const w = window.open('', '_blank', 'width=350,height=600');
+    if (!w) return;
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    w.location.href = url;
   };
 
   if (loading) {
@@ -410,6 +573,15 @@ const SalesHistory: React.FC = () => {
                   className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
                 >
                   Close
+                </button>
+                <button
+                  onClick={() => printReceipt(selectedSale)}
+                  className="px-4 py-2 bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors flex items-center space-x-2"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                  </svg>
+                  <span>Print Receipt</span>
                 </button>
                 {(user?.role === 'manager' || user?.role === 'admin') && (
                   <>

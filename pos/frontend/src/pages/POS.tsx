@@ -135,6 +135,14 @@ export default function POS() {
   const [discount, setDiscount] = useState(0); // currency-dependent
   const [taxPct, setTaxPct] = useState(14); // VAT %, loaded from settings
   const [currencyCode, setCurrencyCode] = useState('USD');
+  const [currencySymbol, setCurrencySymbol] = useState('$');
+  const [printReceiptEnabled, setPrintReceiptEnabled] = useState(false);
+  const [receiptHeader, setReceiptHeader] = useState<string>('');
+  const [receiptFooter, setReceiptFooter] = useState<string>('');
+  const [businessName, setBusinessName] = useState<string>('');
+  const [businessAddress, setBusinessAddress] = useState<string>('');
+  const [businessPhone, setBusinessPhone] = useState<string>('');
+  const [businessEmail, setBusinessEmail] = useState<string>('');
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [tendered, setTendered] = useState("");
@@ -169,6 +177,30 @@ export default function POS() {
           }
           if (typeof s.currency_code === 'string') {
             setCurrencyCode(s.currency_code);
+          }
+          if (typeof s.currency_symbol === 'string') {
+            setCurrencySymbol(s.currency_symbol);
+          }
+          if (typeof s.print_receipt === 'string') {
+            setPrintReceiptEnabled(s.print_receipt === 'true');
+          }
+          if (typeof s.receipt_header === 'string') {
+            setReceiptHeader(s.receipt_header);
+          }
+          if (typeof s.receipt_footer === 'string') {
+            setReceiptFooter(s.receipt_footer);
+          }
+          if (typeof s.business_name === 'string') {
+            setBusinessName(s.business_name);
+          }
+          if (typeof s.business_address === 'string') {
+            setBusinessAddress(s.business_address);
+          }
+          if (typeof s.business_phone === 'string') {
+            setBusinessPhone(s.business_phone);
+          }
+          if (typeof s.business_email === 'string') {
+            setBusinessEmail(s.business_email);
           }
         }
         
@@ -376,6 +408,15 @@ export default function POS() {
       const sale = await enhancedApiService.createSale(saleData);
       
       alert(`Payment success!\nSale #: ${sale.sale_number}\nMethod: ${paymentMethod}\nTotal: ${formatCurrency(total, currencyCode)}`);
+
+      // Print receipt if enabled in settings
+      if (printReceiptEnabled) {
+        try {
+          printReceipt(sale);
+        } catch (e) {
+          // non-blocking
+        }
+      }
       
       // reset cart
       setCart([]);
@@ -392,6 +433,97 @@ export default function POS() {
       }
       alert(`Payment failed: ${message}`);
     }
+  }
+
+  function printReceipt(sale: any) {
+    const now = new Date();
+    const lines = cart.map(ci => ({
+      name: ci.name,
+      qty: ci.qty,
+      price: ci.price,
+      size: ci.size || null,
+      total: ci.qty * ci.price
+    }));
+
+    const sub = calcSubtotal();
+    const tax = calcTax(sub);
+    const tot = calcTotal();
+
+    const html = `<!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Receipt</title>
+        <style>
+          body { font-family: Arial, sans-serif; width: 300px; margin: 0 auto; }
+          .center { text-align: center; }
+          .small { font-size: 12px; color: #444; }
+          .bold { font-weight: bold; }
+          .divider { border-top: 1px dashed #888; margin: 8px 0; }
+          table { width: 100%; border-collapse: collapse; }
+          td { padding: 4px 0; }
+          .totals td { padding: 6px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="center">
+          <div class="bold">${businessName || 'Store'}</div>
+          ${businessAddress ? `<div class="small">${businessAddress}</div>` : ''}
+          ${businessPhone ? `<div class="small">Tel: ${businessPhone}</div>` : ''}
+          ${businessEmail ? `<div class="small">${businessEmail}</div>` : ''}
+        </div>
+        ${receiptHeader ? `<div class="divider"></div><div class="small center">${receiptHeader}</div>` : ''}
+        <div class="divider"></div>
+        <div class="small">Sale #: ${sale?.sale_number || '-'}</div>
+        <div class="small">Date: ${now.toLocaleString()}</div>
+        <div class="divider"></div>
+        <table>
+          ${lines.map(l => `
+            <tr>
+              <td>${l.name}${l.size ? ' (' + l.size + ')' : ''}</td>
+              <td class="small" style="text-align:right">${l.qty} x ${formatCurrency(l.price, currencyCode)}</td>
+            </tr>
+            <tr>
+              <td></td>
+              <td style="text-align:right" class="bold">${formatCurrency(l.total, currencyCode)}</td>
+            </tr>
+          `).join('')}
+        </table>
+        <div class="divider"></div>
+        <table class="totals">
+          <tr>
+            <td>Subtotal</td>
+            <td style="text-align:right">${formatCurrency(sub, currencyCode)}</td>
+          </tr>
+          <tr>
+            <td>Discount</td>
+            <td style="text-align:right">${formatCurrency(discount, currencyCode)}</td>
+          </tr>
+          <tr>
+            <td>Tax (${taxPct}%)</td>
+            <td style="text-align:right">${formatCurrency(tax, currencyCode)}</td>
+          </tr>
+          <tr>
+            <td class="bold">Total</td>
+            <td style="text-align:right" class="bold">${formatCurrency(tot, currencyCode)}</td>
+          </tr>
+          <tr>
+            <td>Method</td>
+            <td style="text-align:right">${paymentMethod}</td>
+          </tr>
+        </table>
+        ${receiptFooter ? `<div class="divider"></div><div class="small center">${receiptFooter}</div>` : ''}
+      </body>
+      <script>
+        window.onload = function() { window.print(); setTimeout(() => window.close(), 500); };
+      </script>
+    </html>`;
+
+    const w = window.open('', '_blank', 'width=350,height=600');
+    if (!w) return;
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    w.location.href = url;
   }
 
   function holdSale() {
