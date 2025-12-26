@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { enhancedApiService, Sale } from '../services/enhancedApiService';
 import { useAuth } from '../contexts/AuthContext';
+import { printReceipt } from '../utils/receiptPrinter';
 
 function formatEGP(v: number) {
   return `${v.toFixed(2)} EGP`;
@@ -165,9 +166,8 @@ const SalesHistory: React.FC = () => {
     }
   };
 
-  const printReceipt = (sale: Sale) => {
-    const now = new Date();
-    const lines = sale.items.map(item => ({
+  const handlePrintReceipt = (sale: Sale) => {
+    const items = sale.items.map(item => ({
       name: item.product_id,
       qty: item.quantity,
       price: item.unit_price,
@@ -175,93 +175,32 @@ const SalesHistory: React.FC = () => {
       total: item.quantity * item.unit_price
     }));
 
-    const html = `<!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8" />
-        <title>Receipt - ${sale.sale_number}</title>
-        <style>
-          body { font-family: Arial, sans-serif; width: 300px; margin: 0 auto; }
-          .center { text-align: center; }
-          .small { font-size: 12px; color: #444; }
-          .bold { font-weight: bold; }
-          .divider { border-top: 1px dashed #888; margin: 8px 0; }
-          table { width: 100%; border-collapse: collapse; }
-          td { padding: 4px 0; }
-          .totals td { padding: 6px 0; }
-        </style>
-      </head>
-      <body>
-        <div class="center">
-          <div class="bold">${businessName || 'Store'}</div>
-          ${businessAddress ? `<div class="small">${businessAddress}</div>` : ''}
-          ${businessPhone ? `<div class="small">Tel: ${businessPhone}</div>` : ''}
-          ${businessEmail ? `<div class="small">${businessEmail}</div>` : ''}
-        </div>
-        ${receiptHeader ? `<div class="divider"></div><div class="small center">${receiptHeader}</div>` : ''}
-        <div class="divider"></div>
-        <div class="small">Sale #: ${sale.sale_number}</div>
-        <div class="small">Date: ${new Date(sale.created_at).toLocaleString()}</div>
-        ${sale.cashier ? `<div class="small">Cashier: ${sale.cashier}</div>` : ''}
-        ${sale.customer_name ? `<div class="small">Customer: ${sale.customer_name}</div>` : ''}
-        <div class="divider"></div>
-        <table>
-          ${lines.map(l => `
-            <tr>
-              <td>${l.name}${l.size ? ' (' + l.size + ')' : ''}</td>
-              <td class="small" style="text-align:right">${l.qty} x ${formatCurrency(l.price, currencyCode)}</td>
-            </tr>
-            <tr>
-              <td></td>
-              <td style="text-align:right" class="bold">${formatCurrency(l.total, currencyCode)}</td>
-            </tr>
-          `).join('')}
-        </table>
-        <div class="divider"></div>
-        <table class="totals">
-          <tr>
-            <td>Subtotal</td>
-            <td style="text-align:right">${formatCurrency(sale.subtotal, currencyCode)}</td>
-          </tr>
-          ${sale.discount_amount > 0 ? `
-          <tr>
-            <td>Discount</td>
-            <td style="text-align:right">${formatCurrency(sale.discount_amount, currencyCode)}</td>
-          </tr>` : ''}
-          <tr>
-            <td>Tax</td>
-            <td style="text-align:right">${formatCurrency(sale.tax_amount, currencyCode)}</td>
-          </tr>
-          <tr>
-            <td class="bold">Total</td>
-            <td style="text-align:right" class="bold">${formatCurrency(sale.total_amount, currencyCode)}</td>
-          </tr>
-          <tr>
-            <td>Method</td>
-            <td style="text-align:right">${sale.payment_method || 'Cash'}</td>
-          </tr>
-          ${sale.tendered_amount ? `
-          <tr>
-            <td>Tendered</td>
-            <td style="text-align:right">${formatCurrency(sale.tendered_amount, currencyCode)}</td>
-          </tr>
-          <tr>
-            <td>Change</td>
-            <td style="text-align:right">${formatCurrency(sale.change_amount || 0, currencyCode)}</td>
-          </tr>` : ''}
-        </table>
-        ${receiptFooter ? `<div class="divider"></div><div class="small center">${receiptFooter}</div>` : ''}
-      </body>
-      <script>
-        window.onload = function() { window.print(); setTimeout(() => window.close(), 500); };
-      </script>
-    </html>`;
-
-    const w = window.open('', '_blank', 'width=350,height=600');
-    if (!w) return;
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    w.location.href = url;
+    printReceipt(
+      {
+        saleNumber: sale.sale_number,
+        date: new Date(sale.created_at),
+        cashier: sale.cashier,
+        customerName: sale.customer_name,
+        items,
+        subtotal: sale.subtotal,
+        discount: sale.discount_amount,
+        tax: sale.tax_amount,
+        total: sale.total_amount,
+        paymentMethod: sale.payment_method || 'Cash',
+        tenderedAmount: sale.tendered_amount,
+        changeAmount: sale.change_amount
+      },
+      {
+        currencyCode,
+        currencySymbol,
+        receiptHeader,
+        receiptFooter,
+        businessName,
+        businessAddress,
+        businessPhone,
+        businessEmail
+      }
+    );
   };
 
   if (loading) {
@@ -575,7 +514,7 @@ const SalesHistory: React.FC = () => {
                   Close
                 </button>
                 <button
-                  onClick={() => printReceipt(selectedSale)}
+                  onClick={() => handlePrintReceipt(selectedSale)}
                   className="px-4 py-2 bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors flex items-center space-x-2"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

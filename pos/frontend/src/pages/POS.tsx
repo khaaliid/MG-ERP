@@ -7,6 +7,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from 'react-router-dom';
 import { enhancedApiService, Product, Category } from "../services/enhancedApiService";
 import { useAuth } from "../contexts/AuthContext";
+import { printReceipt } from "../utils/receiptPrinter";
 
 function formatCurrency(v: number, currencyCode: string) {
   const value = typeof v === 'number' && !isNaN(v) ? v : 0;
@@ -412,7 +413,7 @@ export default function POS() {
       // Print receipt if enabled in settings
       if (printReceiptEnabled) {
         try {
-          printReceipt(sale);
+          handlePrintReceipt(sale);
         } catch (e) {
           // non-blocking
         }
@@ -435,9 +436,8 @@ export default function POS() {
     }
   }
 
-  function printReceipt(sale: any) {
-    const now = new Date();
-    const lines = cart.map(ci => ({
+  function handlePrintReceipt(sale: any) {
+    const items = cart.map(ci => ({
       name: ci.name,
       qty: ci.qty,
       price: ci.price,
@@ -449,81 +449,32 @@ export default function POS() {
     const tax = calcTax(sub);
     const tot = calcTotal();
 
-    const html = `<!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8" />
-        <title>Receipt</title>
-        <style>
-          body { font-family: Arial, sans-serif; width: 300px; margin: 0 auto; }
-          .center { text-align: center; }
-          .small { font-size: 12px; color: #444; }
-          .bold { font-weight: bold; }
-          .divider { border-top: 1px dashed #888; margin: 8px 0; }
-          table { width: 100%; border-collapse: collapse; }
-          td { padding: 4px 0; }
-          .totals td { padding: 6px 0; }
-        </style>
-      </head>
-      <body>
-        <div class="center">
-          <div class="bold">${businessName || 'Store'}</div>
-          ${businessAddress ? `<div class="small">${businessAddress}</div>` : ''}
-          ${businessPhone ? `<div class="small">Tel: ${businessPhone}</div>` : ''}
-          ${businessEmail ? `<div class="small">${businessEmail}</div>` : ''}
-        </div>
-        ${receiptHeader ? `<div class="divider"></div><div class="small center">${receiptHeader}</div>` : ''}
-        <div class="divider"></div>
-        <div class="small">Sale #: ${sale?.sale_number || '-'}</div>
-        <div class="small">Date: ${now.toLocaleString()}</div>
-        <div class="divider"></div>
-        <table>
-          ${lines.map(l => `
-            <tr>
-              <td>${l.name}${l.size ? ' (' + l.size + ')' : ''}</td>
-              <td class="small" style="text-align:right">${l.qty} x ${formatCurrency(l.price, currencyCode)}</td>
-            </tr>
-            <tr>
-              <td></td>
-              <td style="text-align:right" class="bold">${formatCurrency(l.total, currencyCode)}</td>
-            </tr>
-          `).join('')}
-        </table>
-        <div class="divider"></div>
-        <table class="totals">
-          <tr>
-            <td>Subtotal</td>
-            <td style="text-align:right">${formatCurrency(sub, currencyCode)}</td>
-          </tr>
-          <tr>
-            <td>Discount</td>
-            <td style="text-align:right">${formatCurrency(discount, currencyCode)}</td>
-          </tr>
-          <tr>
-            <td>Tax (${taxPct}%)</td>
-            <td style="text-align:right">${formatCurrency(tax, currencyCode)}</td>
-          </tr>
-          <tr>
-            <td class="bold">Total</td>
-            <td style="text-align:right" class="bold">${formatCurrency(tot, currencyCode)}</td>
-          </tr>
-          <tr>
-            <td>Method</td>
-            <td style="text-align:right">${paymentMethod}</td>
-          </tr>
-        </table>
-        ${receiptFooter ? `<div class="divider"></div><div class="small center">${receiptFooter}</div>` : ''}
-      </body>
-      <script>
-        window.onload = function() { window.print(); setTimeout(() => window.close(), 500); };
-      </script>
-    </html>`;
-
-    const w = window.open('', '_blank', 'width=350,height=600');
-    if (!w) return;
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    w.location.href = url;
+    printReceipt(
+      {
+        saleNumber: sale?.sale_number || '-',
+        date: new Date(),
+        cashier: user?.username,
+        items,
+        subtotal: sub,
+        discount,
+        tax,
+        taxRate: taxPct / 100,
+        total: tot,
+        paymentMethod,
+        tenderedAmount: paymentMethod === "Cash" ? parseFloat(tendered) : undefined,
+        changeAmount: paymentMethod === "Cash" ? Math.max(0, parseFloat(tendered || "0") - tot) : undefined
+      },
+      {
+        currencyCode,
+        currencySymbol,
+        receiptHeader,
+        receiptFooter,
+        businessName,
+        businessAddress,
+        businessPhone,
+        businessEmail
+      }
+    );
   }
 
   function holdSale() {
