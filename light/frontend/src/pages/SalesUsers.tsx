@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { salesUserAPI } from '../api';
+import '../i18n';
 
 interface SalesUser {
   id: number;
@@ -13,6 +15,7 @@ interface SalesUser {
 }
 
 function SalesUsers() {
+  const { t } = useTranslation();
   const [users, setUsers] = useState<SalesUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -38,7 +41,7 @@ function SalesUsers() {
       setUsers(response.data);
     } catch (error) {
       console.error('Error fetching sales users:', error);
-      alert('Failed to load sales users');
+      alert(t('sales_users_load_failed'));
     } finally {
       setLoading(false);
     }
@@ -58,7 +61,7 @@ function SalesUsers() {
       fetchUsers();
     } catch (error: any) {
       console.error('Error saving sales user:', error);
-      alert(error.response?.data?.detail || 'Failed to save sales user');
+      alert(error.response?.data?.detail || t('sales_users_save_failed'));
     }
   };
 
@@ -76,14 +79,14 @@ function SalesUsers() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this sales user?')) return;
+    if (!confirm(t('sales_users_confirm_delete'))) return;
 
     try {
       await salesUserAPI.delete(id);
       fetchUsers();
     } catch (error: any) {
       console.error('Error deleting sales user:', error);
-      alert(error.response?.data?.detail || 'Failed to delete sales user');
+      alert(error.response?.data?.detail || t('sales_users_delete_failed'));
     }
   };
 
@@ -106,14 +109,14 @@ function SalesUsers() {
     <div className="page">
       <div className="page-header">
         <div>
-          <h1>👥 Sales Users</h1>
-          <p>Manage sales staff and cashiers for POS transactions</p>
+          <h1>👥 {t('sales_users_title')}</h1>
+          <p>{t('sales_users_subtitle')}</p>
         </div>
         <button
           className="button button-primary"
           onClick={() => setShowForm(!showForm)}
         >
-          {showForm ? '✖ Cancel' : '➕ Add User'}
+          {showForm ? `✖ ${t('cancel')}` : `➕ ${t('sales_users_add_button')}`}
         </button>
       </div>
 
@@ -125,19 +128,19 @@ function SalesUsers() {
         marginBottom: '30px' 
       }}>
         <div className="card">
-          <h3>Total Users</h3>
+          <h3>{t('users_total_users')}</h3>
           <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#3498db' }}>
             {users.length}
           </div>
         </div>
         <div className="card">
-          <h3>Active Users</h3>
+          <h3>{t('users_active_users')}</h3>
           <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#2ecc71' }}>
             {activeUsers.length}
           </div>
         </div>
         <div className="card">
-          <h3>Inactive Users</h3>
+          <h3>{t('users_inactive_users')}</h3>
           <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#e74c3c' }}>
             {users.length - activeUsers.length}
           </div>
@@ -147,52 +150,52 @@ function SalesUsers() {
       {/* Add/Edit Form */}
       {showForm && (
         <div className="card" style={{ marginBottom: '30px' }}>
-          <h2>{editingUser ? 'Edit Sales User' : 'Add New Sales User'}</h2>
+          <h2>{editingUser ? t('sales_users_edit_form_title') : t('sales_users_add_form_title')}</h2>
           <form onSubmit={handleSubmit}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
               <div className="form-group">
-                <label>Full Name *</label>
+                <label>{t('users_full_name')} *</label>
                 <input
                   type="text"
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Enter full name"
+                  placeholder={t('users_full_name_placeholder')}
                 />
               </div>
 
               <div className="form-group">
-                <label>Employee Code</label>
+                <label>{t('sales_users_employee_code')}</label>
                 <input
                   type="text"
                   value={formData.employee_code}
                   onChange={(e) => setFormData({ ...formData, employee_code: e.target.value })}
-                  placeholder="e.g., EMP001"
+                  placeholder={t('sales_users_employee_code_placeholder')}
                 />
               </div>
 
               <div className="form-group">
-                <label>Position</label>
+                <label>{t('sales_users_position')}</label>
                 <input
                   type="text"
                   value={formData.position}
                   onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                  placeholder="e.g., Cashier, Sales Associate"
+                  placeholder={t('sales_users_position_placeholder')}
                 />
               </div>
 
               <div className="form-group">
-                <label>Phone</label>
+                <label>{t('sales_users_phone')}</label>
                 <input
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="Phone number"
+                  placeholder={t('sales_users_phone_placeholder')}
                 />
               </div>
 
               <div className="form-group">
-                <label>Email</label>
+                <label>{t('users_email')}</label>
                 <input
                   type="email"
                   value={formData.email}
@@ -202,23 +205,23 @@ function SalesUsers() {
               </div>
 
               <div className="form-group">
-                <label>Status</label>
+                <label>{t('status')}</label>
                 <select
                   value={formData.is_active ? 'true' : 'false'}
                   onChange={(e) => setFormData({ ...formData, is_active: e.target.value === 'true' })}
                 >
-                  <option value="true">Active</option>
-                  <option value="false">Inactive</option>
+                  <option value="true">{t('users_status_active')}</option>
+                  <option value="false">{t('users_status_inactive')}</option>
                 </select>
               </div>
             </div>
 
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
               <button type="submit" className="button button-primary">
-                {editingUser ? '💾 Update User' : '➕ Add User'}
+                {editingUser ? `💾 ${t('sales_users_update_button')}` : `➕ ${t('sales_users_add_button')}`}
               </button>
               <button type="button" className="button button-secondary" onClick={resetForm}>
-                Cancel
+                {t('cancel')}
               </button>
             </div>
           </form>
@@ -233,29 +236,29 @@ function SalesUsers() {
             checked={showInactive}
             onChange={(e) => setShowInactive(e.target.checked)}
           />
-          <span style={{ fontWeight: 'bold' }}>Show inactive users</span>
+          <span style={{ fontWeight: 'bold' }}>{t('users_show_inactive')}</span>
         </label>
       </div>
 
       {/* Users Table */}
       <div className="card">
-        <h2>Sales Users</h2>
+        <h2>{t('sales_users_table_title')}</h2>
         {loading ? (
-          <p>Loading users...</p>
+          <p>{t('sales_users_loading')}</p>
         ) : users.length === 0 ? (
-          <p>No sales users found. Add your first user to get started.</p>
+          <p>{t('sales_users_no_records')}</p>
         ) : (
           <table className="data-table">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Employee Code</th>
-                <th>Position</th>
-                <th>Phone</th>
-                <th>Email</th>
-                <th>Status</th>
-                <th>Created</th>
-                <th>Actions</th>
+                <th>{t('users_full_name')}</th>
+                <th>{t('sales_users_employee_code')}</th>
+                <th>{t('sales_users_position')}</th>
+                <th>{t('sales_users_phone')}</th>
+                <th>{t('users_email')}</th>
+                <th>{t('status')}</th>
+                <th>{t('users_created')}</th>
+                <th>{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -287,7 +290,7 @@ function SalesUsers() {
                       backgroundColor: user.is_active ? '#d5f4e6' : '#fadbd8',
                       color: user.is_active ? '#0f5132' : '#721c24'
                     }}>
-                      {user.is_active ? '✓ Active' : '✗ Inactive'}
+                      {user.is_active ? `✓ ${t('users_status_active')}` : `✗ ${t('users_status_inactive')}`}
                     </span>
                   </td>
                   <td>{new Date(user.created_at).toLocaleDateString()}</td>
@@ -297,13 +300,13 @@ function SalesUsers() {
                       onClick={() => handleEdit(user)}
                       style={{ marginRight: '5px' }}
                     >
-                      ✏️ Edit
+                      ✏️ {t('edit')}
                     </button>
                     <button
                       className="button button-sm button-danger"
                       onClick={() => handleDelete(user.id)}
                     >
-                      🗑️ Delete
+                      🗑️ {t('users_delete_btn')}
                     </button>
                   </td>
                 </tr>

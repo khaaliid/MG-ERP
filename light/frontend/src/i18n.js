@@ -268,6 +268,26 @@ const resources = {
         "users_cannot_delete_self": "Cannot delete your own account",
         "users_confirm_delete": "Are you sure you want to delete this user? This action cannot be undone.",
 
+        // Sales users page
+        "sales_users_subtitle": "Manage sales staff and cashiers for POS transactions",
+        "sales_users_add_button": "Add User",
+        "sales_users_update_button": "Update User",
+        "sales_users_edit_form_title": "Edit Sales User",
+        "sales_users_add_form_title": "Add New Sales User",
+        "sales_users_employee_code": "Employee Code",
+        "sales_users_employee_code_placeholder": "e.g., EMP001",
+        "sales_users_position": "Position",
+        "sales_users_position_placeholder": "e.g., Cashier, Sales Associate",
+        "sales_users_phone": "Phone",
+        "sales_users_phone_placeholder": "Phone number",
+        "sales_users_table_title": "Sales Users",
+        "sales_users_loading": "Loading users...",
+        "sales_users_no_records": "No sales users found. Add your first user to get started.",
+        "sales_users_load_failed": "Failed to load sales users",
+        "sales_users_save_failed": "Failed to save sales user",
+        "sales_users_delete_failed": "Failed to delete sales user",
+        "sales_users_confirm_delete": "Are you sure you want to delete this sales user?",
+
     }
   },
  de: {
@@ -534,6 +554,26 @@ const resources = {
     "users_deleted_success": "Benutzer erfolgreich gelöscht",
     "users_cannot_delete_self": "Eigenes Konto kann nicht gelöscht werden",
     "users_confirm_delete": "Möchten Sie diesen Benutzer wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+
+    // Sales users page
+    "sales_users_subtitle": "Vertriebspersonal und Kassierer für POS-Transaktionen verwalten",
+    "sales_users_add_button": "Benutzer hinzufügen",
+    "sales_users_update_button": "Benutzer aktualisieren",
+    "sales_users_edit_form_title": "Vertriebsmitarbeiter bearbeiten",
+    "sales_users_add_form_title": "Neuen Vertriebsmitarbeiter hinzufügen",
+    "sales_users_employee_code": "Mitarbeiternummer",
+    "sales_users_employee_code_placeholder": "z. B. EMP001",
+    "sales_users_position": "Position",
+    "sales_users_position_placeholder": "z. B. Kassierer, Verkaufsberater",
+    "sales_users_phone": "Telefon",
+    "sales_users_phone_placeholder": "Telefonnummer",
+    "sales_users_table_title": "Vertriebsmitarbeiter",
+    "sales_users_loading": "Benutzer werden geladen...",
+    "sales_users_no_records": "Keine Vertriebsmitarbeiter gefunden. Fügen Sie Ihren ersten Benutzer hinzu.",
+    "sales_users_load_failed": "Vertriebsmitarbeiter konnten nicht geladen werden",
+    "sales_users_save_failed": "Vertriebsmitarbeiter konnte nicht gespeichert werden",
+    "sales_users_delete_failed": "Vertriebsmitarbeiter konnte nicht gelöscht werden",
+    "sales_users_confirm_delete": "Möchten Sie diesen Vertriebsmitarbeiter wirklich löschen?",
   }
 },ar: {
   translation: {
@@ -800,6 +840,26 @@ const resources = {
     "users_deleted_success": "تم حذف المستخدم بنجاح",
     "users_cannot_delete_self": "لا يمكنك حذف حسابك الخاص",
     "users_confirm_delete": "هل أنت متأكد أنك تريد حذف هذا المستخدم؟ لا يمكن التراجع عن هذا الإجراء.",
+
+    // Sales users page
+    "sales_users_subtitle": "إدارة موظفي المبيعات وأمناء الصندوق لعمليات نقطة البيع",
+    "sales_users_add_button": "إضافة مستخدم",
+    "sales_users_update_button": "تحديث المستخدم",
+    "sales_users_edit_form_title": "تعديل مستخدم المبيعات",
+    "sales_users_add_form_title": "إضافة مستخدم مبيعات جديد",
+    "sales_users_employee_code": "رمز الموظف",
+    "sales_users_employee_code_placeholder": "مثال: EMP001",
+    "sales_users_position": "المنصب",
+    "sales_users_position_placeholder": "مثال: أمين صندوق، مندوب مبيعات",
+    "sales_users_phone": "الهاتف",
+    "sales_users_phone_placeholder": "رقم الهاتف",
+    "sales_users_table_title": "مستخدمو المبيعات",
+    "sales_users_loading": "جارٍ تحميل المستخدمين...",
+    "sales_users_no_records": "لم يتم العثور على مستخدمي مبيعات. أضف أول مستخدم للبدء.",
+    "sales_users_load_failed": "فشل في تحميل مستخدمي المبيعات",
+    "sales_users_save_failed": "فشل في حفظ مستخدم المبيعات",
+    "sales_users_delete_failed": "فشل في حذف مستخدم المبيعات",
+    "sales_users_confirm_delete": "هل أنت متأكد من حذف مستخدم المبيعات هذا؟",
   }
 }
 };
