@@ -7,7 +7,7 @@ from fastapi.responses import StreamingResponse, Response
 from sqlalchemy import or_, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Union
 from datetime import datetime, timedelta
 import uuid
 import io
@@ -28,11 +28,11 @@ except (ImportError, FileNotFoundError, Exception) as e:
     logging.getLogger(__name__).info(f"ESC/POS thermal printing disabled: {e}")
 
 from database import get_db
-from models import LedgerRecord, InventoryItem, POSTransaction, POSItem, TransactionType, User, UserRole, Expense, SalesUser, Refund, RefundItem
+from models import LedgerRecord, InventoryItem, POSTransaction, POSItem, TransactionType, PaymentMethod, User, UserRole, Expense, SalesUser, Refund, RefundItem
 from schemas import (
     LedgerRecordCreate, LedgerRecordResponse,
     InventoryItemCreate, InventoryItemUpdate, InventoryItemResponse,
-    POSTransactionCreate, POSTransactionResponse,
+    POSTransactionCreate, POSTransactionResponse, POSTransactionPageResponse,
     SalesReportResponse, InventoryReportResponse, LedgerReportResponse,
     Token, UserLogin, UserCreate, UserUpdate, UserResponse,
     ExpenseCreate, ExpenseUpdate, ExpenseResponse,
@@ -527,13 +527,15 @@ def calculate_ean13_checksum(barcode_12: str) -> int:
 
 
 # ============= POS Routes =============
-@router.get("/pos/transactions", response_model=List[POSTransactionResponse])
+@router.get("/pos/transactions", response_model=Union[List[POSTransactionResponse], POSTransactionPageResponse])
 def get_pos_transactions(
     skip: int = 0,
-    limit: int = 50,
+    limit: int = Query(50, ge=1, le=500),
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     search: Optional[str] = None,
+    payment_method: Optional[str] = None,
+    paginated: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_cashier)
 ):
@@ -551,7 +553,26 @@ def get_pos_transactions(
             filters.append(POSTransaction.id == int(search_term))
         query = query.filter(or_(*filters))
 
-    return query.order_by(POSTransaction.transaction_date.desc()).offset(skip).limit(limit).all()
+    payment_method_term = (payment_method or '').strip().lower()
+    if payment_method_term and payment_method_term != 'all':
+        try:
+            parsed_payment_method = PaymentMethod(payment_method_term)
+            query = query.filter(POSTransaction.payment_method == parsed_payment_method)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid payment method filter")
+
+    total = query.count()
+    transactions = query.order_by(POSTransaction.transaction_date.desc()).offset(skip).limit(limit).all()
+
+    if paginated:
+        return {
+            "items": transactions,
+            "total": total,
+            "skip": skip,
+            "limit": limit,
+        }
+
+    return transactions
 
 
 @router.post("/pos/transactions", response_model=POSTransactionResponse)

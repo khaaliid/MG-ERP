@@ -29,6 +29,13 @@ interface TransactionRecord {
   items: TransactionItem[];
 }
 
+interface TransactionsPageResponse {
+  items: TransactionRecord[];
+  total: number;
+  skip: number;
+  limit: number;
+}
+
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat(undefined, {
     style: 'currency',
@@ -63,23 +70,50 @@ function TransactionsHistory() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('all');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalCount, setTotalCount] = useState(0);
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [refundQtyByItem, setRefundQtyByItem] = useState<Record<number, string>>({});
   const [refundReasonByItem, setRefundReasonByItem] = useState<Record<number, string>>({});
   const [refundRestockByItem, setRefundRestockByItem] = useState<Record<number, boolean>>({});
   const [refundingItemId, setRefundingItemId] = useState<number | null>(null);
 
-  const loadTransactions = async () => {
+  const loadTransactions = async (
+    nextPage: number = page,
+    nextPageSize: number = pageSize,
+    overrides?: {
+      searchText?: string;
+      startDate?: string;
+      endDate?: string;
+      paymentMethod?: string;
+    }
+  ) => {
     try {
       setLoading(true);
+      const safePage = Math.max(1, nextPage);
+      const safePageSize = Math.max(1, nextPageSize);
+      const skip = (safePage - 1) * safePageSize;
+      const effectiveSearchText = overrides?.searchText ?? searchText;
+      const effectiveStartDate = overrides?.startDate ?? startDate;
+      const effectiveEndDate = overrides?.endDate ?? endDate;
+      const effectivePaymentMethod = overrides?.paymentMethod ?? paymentMethod;
       const response = await posAPI.getTransactions({
-        search: searchText.trim() || undefined,
-        start_date: toIsoDateStart(startDate),
-        end_date: toIsoDateEnd(endDate),
-        limit: 200,
+        search: effectiveSearchText.trim() || undefined,
+        start_date: toIsoDateStart(effectiveStartDate),
+        end_date: toIsoDateEnd(effectiveEndDate),
+        payment_method: effectivePaymentMethod !== 'all' ? effectivePaymentMethod : undefined,
+        skip,
+        limit: safePageSize,
+        paginated: true,
       });
 
-      setTransactions(response.data || []);
+      const data: TransactionsPageResponse = response.data;
+      setTransactions(data?.items || []);
+      setTotalCount(data?.total || 0);
+      setPage(safePage);
+      setPageSize(safePageSize);
+      setExpandedIds(new Set());
       setError('');
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to load transactions history');
@@ -89,31 +123,28 @@ function TransactionsHistory() {
   };
 
   useEffect(() => {
-    void loadTransactions();
+    void loadTransactions(1, pageSize);
   }, []);
 
-  const filteredTransactions = useMemo(() => {
-    if (paymentMethod === 'all') {
-      return transactions;
+  const totalPages = useMemo(() => {
+    if (totalCount <= 0) {
+      return 1;
     }
-
-    return transactions.filter(
-      (tx) => (tx.payment_method || '').toLowerCase() === paymentMethod.toLowerCase()
-    );
-  }, [paymentMethod, transactions]);
+    return Math.ceil(totalCount / pageSize);
+  }, [totalCount, pageSize]);
 
   const totalAmount = useMemo(
-    () => filteredTransactions.reduce((sum, tx) => sum + (tx.total || 0), 0),
-    [filteredTransactions]
+    () => transactions.reduce((sum, tx) => sum + (tx.total || 0), 0),
+    [transactions]
   );
 
   const totalItemsSold = useMemo(
     () =>
-      filteredTransactions.reduce(
+      transactions.reduce(
         (sum, tx) => sum + tx.items.reduce((itemSum, item) => itemSum + (item.quantity || 0), 0),
         0
       ),
-    [filteredTransactions]
+    [transactions]
   );
 
   const toggleTransactionDetails = (id: number) => {
@@ -133,17 +164,21 @@ function TransactionsHistory() {
     const refundQty = Number.parseInt(qtyValue, 10);
 
     if (!Number.isFinite(refundQty) || refundQty <= 0) {
-      alert('Enter a valid refund quantity');
+      alert(t('transactions_history_enter_valid_refund_qty'));
       return;
     }
 
     if (refundQty > item.quantity) {
-      alert(`Refund quantity cannot exceed purchased quantity (${item.quantity})`);
+      alert(t('transactions_history_refund_qty_exceed', { quantity: item.quantity }));
       return;
     }
 
     const shouldProceed = confirm(
-      `Refund ${refundQty} unit(s) of ${item.product_name} from ${tx.transaction_number}?`
+      t('transactions_history_refund_confirm', {
+        qty: refundQty,
+        product: item.product_name,
+        transaction: tx.transaction_number,
+      })
     );
     if (!shouldProceed) {
       return;
@@ -158,13 +193,13 @@ function TransactionsHistory() {
         restock: refundRestockByItem[item.id] ?? true,
       });
 
-      alert('Item refund processed successfully');
+      alert(t('transactions_history_refund_success'));
       setRefundQtyByItem((prev) => ({ ...prev, [item.id]: '' }));
       setRefundReasonByItem((prev) => ({ ...prev, [item.id]: '' }));
       setRefundRestockByItem((prev) => ({ ...prev, [item.id]: true }));
       await loadTransactions();
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Refund failed');
+      alert(err.response?.data?.detail || t('transactions_history_refund_failed'));
     } finally {
       setRefundingItemId(null);
     }
@@ -174,47 +209,47 @@ function TransactionsHistory() {
     <div>
       <div className="page-header">
         <h1>🧾 {t('transactions_history_title')}</h1>
-        <p>Review old transactions with full item-level details</p>
+        <p>{t('transactions_history_subtitle')}</p>
       </div>
 
       <div className="card">
-        <h3>Filters</h3>
+        <h3>{t('transactions_history_filters')}</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Search</label>
+            <label>{t('transactions_history_search')}</label>
             <input
               type="text"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              placeholder="Transaction # or ID"
+              placeholder={t('transactions_history_search_placeholder')}
             />
           </div>
 
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>From</label>
+            <label>{t('transactions_history_from')}</label>
             <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           </div>
 
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>To</label>
+            <label>{t('transactions_history_to')}</label>
             <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </div>
 
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Payment Method</label>
+            <label>{t('transactions_history_payment_method')}</label>
             <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
-              <option value="all">All</option>
-              <option value="cash">Cash</option>
-              <option value="card">Card</option>
-              <option value="bank_transfer">Bank Transfer</option>
-              <option value="mobile_payment">Mobile Payment</option>
+              <option value="all">{t('transactions_history_all')}</option>
+              <option value="cash">{t('transactions_history_payment_cash')}</option>
+              <option value="card">{t('transactions_history_payment_card')}</option>
+              <option value="bank_transfer">{t('transactions_history_payment_bank_transfer')}</option>
+              <option value="mobile_payment">{t('transactions_history_payment_mobile_payment')}</option>
             </select>
           </div>
         </div>
 
         <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
-          <button className="button button-primary" onClick={() => void loadTransactions()}>
-            Apply Filters
+          <button className="button button-primary" onClick={() => void loadTransactions(1, pageSize)}>
+            {t('transactions_history_apply_filters')}
           </button>
           <button
             className="button"
@@ -224,64 +259,70 @@ function TransactionsHistory() {
               setEndDate('');
               setPaymentMethod('all');
               setExpandedIds(new Set());
-              void loadTransactions();
+              setPage(1);
+              void loadTransactions(1, pageSize, {
+                searchText: '',
+                startDate: '',
+                endDate: '',
+                paymentMethod: 'all',
+              });
             }}
           >
-            Reset
+            {t('transactions_history_reset')}
           </button>
         </div>
       </div>
 
       <div className="stats-grid" style={{ marginBottom: 20 }}>
         <div className="stat-card">
-          <h3>Total Transactions</h3>
-          <div className="value">{filteredTransactions.length}</div>
+          <h3>{t('transactions_history_total_transactions')}</h3>
+          <div className="value">{totalCount}</div>
         </div>
         <div className="stat-card">
-          <h3>Total Sales Amount</h3>
+          <h3>{t('transactions_history_total_sales_amount')}</h3>
           <div className="value" style={{ fontSize: 28 }}>{formatCurrency(totalAmount)}</div>
         </div>
         <div className="stat-card">
-          <h3>Total Units Sold</h3>
+          <h3>{t('transactions_history_total_units_sold')}</h3>
           <div className="value">{totalItemsSold}</div>
         </div>
       </div>
 
-      {loading && <div className="loading">Loading transactions history...</div>}
+      {loading && <div className="loading">{t('transactions_history_loading')}</div>}
       {error && <div className="error">{error}</div>}
 
       {!loading && !error && (
         <div className="card">
-          <h3>Transactions</h3>
+          <h3>{t('transactions_history_transactions')}</h3>
 
-          {filteredTransactions.length === 0 ? (
-            <p style={{ color: '#7f8c8d' }}>No transactions found for the selected filters.</p>
+          {transactions.length === 0 ? (
+            <p style={{ color: '#7f8c8d' }}>{t('transactions_history_no_transactions')}</p>
           ) : (
             <table className="table">
               <thead>
                 <tr>
-                  <th>Transaction #</th>
-                  <th>Date</th>
-                  <th>Customer</th>
-                  <th>Payment</th>
-                  <th>Total</th>
-                  <th>Details</th>
+                  <th>{t('transactions_history_col_transaction')}</th>
+                  <th>{t('transactions_history_col_date')}</th>
+                  <th>{t('transactions_history_col_customer')}</th>
+                  <th>{t('transactions_history_col_payment')}</th>
+                  <th>{t('transactions_history_col_total')}</th>
+                  <th>{t('transactions_history_col_details')}</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredTransactions.map((tx) => {
+                {transactions.map((tx) => {
                   const isExpanded = expandedIds.has(tx.id);
                   return (
                     <Fragment key={tx.id}>
                       <tr>
                         <td>{tx.transaction_number}</td>
                         <td>{new Date(tx.transaction_date).toLocaleString()}</td>
-                        <td>{tx.customer_name || 'Walk-in'}</td>
+                        <td>{tx.customer_name || t('transactions_history_walk_in')}</td>
                         <td style={{ textTransform: 'capitalize' }}>{(tx.payment_method || '').replace('_', ' ')}</td>
                         <td>{formatCurrency(tx.total)}</td>
                         <td>
                           <button className="button" onClick={() => toggleTransactionDetails(tx.id)}>
-                            {isExpanded ? 'Hide' : 'View'}
+                            {isExpanded ? t('transactions_history_hide') : t('transactions_history_view')}
                           </button>
                         </td>
                       </tr>
@@ -291,31 +332,31 @@ function TransactionsHistory() {
                           <td colSpan={6} style={{ background: '#f9fbff' }}>
                             <div style={{ padding: '8px 0' }}>
                               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8, marginBottom: 10 }}>
-                                <div><strong>Subtotal:</strong> {formatCurrency(tx.subtotal)}</div>
-                                <div><strong>Tax:</strong> {formatCurrency(tx.tax)}</div>
-                                <div><strong>Discount:</strong> {formatCurrency(tx.discount)}</div>
-                                <div><strong>Paid:</strong> {formatCurrency(tx.payment_received)}</div>
-                                <div><strong>Change:</strong> {formatCurrency(tx.change_returned)}</div>
-                                <div><strong>Total:</strong> {formatCurrency(tx.total)}</div>
+                                <div><strong>{t('transactions_history_subtotal')}:</strong> {formatCurrency(tx.subtotal)}</div>
+                                <div><strong>{t('transactions_history_tax')}:</strong> {formatCurrency(tx.tax)}</div>
+                                <div><strong>{t('transactions_history_discount')}:</strong> {formatCurrency(tx.discount)}</div>
+                                <div><strong>{t('transactions_history_paid')}:</strong> {formatCurrency(tx.payment_received)}</div>
+                                <div><strong>{t('transactions_history_change')}:</strong> {formatCurrency(tx.change_returned)}</div>
+                                <div><strong>{t('transactions_history_total')}:</strong> {formatCurrency(tx.total)}</div>
                               </div>
 
                               {tx.notes && (
                                 <div style={{ marginBottom: 10 }}>
-                                  <strong>Notes:</strong> {tx.notes}
+                                  <strong>{t('transactions_history_notes')}:</strong> {tx.notes}
                                 </div>
                               )}
 
                               <table className="table" style={{ background: '#fff', borderRadius: 6, overflow: 'hidden' }}>
                                 <thead>
                                   <tr>
-                                    <th>Item</th>
-                                    <th>Qty</th>
-                                    <th>Unit Price</th>
-                                    <th>Subtotal</th>
-                                    {canRefund && <th>Refund Qty</th>}
-                                    {canRefund && <th>Reason</th>}
-                                    {canRefund && <th>Restock</th>}
-                                    {canRefund && <th>Action</th>}
+                                    <th>{t('transactions_history_item')}</th>
+                                    <th>{t('transactions_history_qty')}</th>
+                                    <th>{t('transactions_history_unit_price')}</th>
+                                    <th>{t('transactions_history_subtotal')}</th>
+                                    {canRefund && <th>{t('transactions_history_refund_qty')}</th>}
+                                    {canRefund && <th>{t('transactions_history_reason')}</th>}
+                                    {canRefund && <th>{t('transactions_history_restock')}</th>}
+                                    {canRefund && <th>{t('transactions_history_action')}</th>}
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -336,7 +377,7 @@ function TransactionsHistory() {
                                           onChange={(e) =>
                                             setRefundQtyByItem((prev) => ({ ...prev, [item.id]: e.target.value }))
                                           }
-                                          placeholder="Qty"
+                                          placeholder={t('transactions_history_qty')}
                                           disabled={refundingItemId === item.id}
                                           style={{ width: '100%' }}
                                         />
@@ -350,7 +391,7 @@ function TransactionsHistory() {
                                           onChange={(e) =>
                                             setRefundReasonByItem((prev) => ({ ...prev, [item.id]: e.target.value }))
                                           }
-                                          placeholder="Optional"
+                                          placeholder={t('transactions_history_optional')}
                                           disabled={refundingItemId === item.id}
                                           style={{ width: '100%' }}
                                         />
@@ -375,7 +416,9 @@ function TransactionsHistory() {
                                           onClick={() => void handleItemRefund(tx, item)}
                                           disabled={refundingItemId === item.id}
                                         >
-                                          {refundingItemId === item.id ? 'Processing...' : 'Refund Item'}
+                                          {refundingItemId === item.id
+                                            ? t('transactions_history_processing')
+                                            : t('transactions_history_refund_item')}
                                         </button>
                                       </td>
                                       )}
@@ -392,6 +435,54 @@ function TransactionsHistory() {
                 })}
               </tbody>
             </table>
+          )}
+
+          {!loading && !error && totalCount > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginTop: 14, flexWrap: 'wrap' }}>
+              <div style={{ color: '#7f8c8d', fontSize: 14 }}>
+                {t('transactions_history_page_summary', {
+                  from: totalCount === 0 ? 0 : (page - 1) * pageSize + 1,
+                  to: Math.min(page * pageSize, totalCount),
+                  total: totalCount,
+                })}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <label style={{ fontSize: 14 }}>{t('transactions_history_rows_per_page')}</label>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    const nextSize = Number.parseInt(e.target.value, 10) || 20;
+                    void loadTransactions(1, nextSize);
+                  }}
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+
+                <button
+                  className="button"
+                  onClick={() => void loadTransactions(page - 1, pageSize)}
+                  disabled={page <= 1 || loading}
+                >
+                  {t('transactions_history_previous')}
+                </button>
+
+                <span style={{ minWidth: 120, textAlign: 'center' }}>
+                  {t('transactions_history_page_x_of_y', { page, totalPages })}
+                </span>
+
+                <button
+                  className="button"
+                  onClick={() => void loadTransactions(page + 1, pageSize)}
+                  disabled={page >= totalPages || loading}
+                >
+                  {t('transactions_history_next')}
+                </button>
+              </div>
+            </div>
           )}
         </div>
       )}

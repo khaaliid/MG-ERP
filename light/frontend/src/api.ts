@@ -69,7 +69,15 @@ export const inventoryAPI = {
 
 // POS API
 export const posAPI = {
-  getTransactions: (params?: { start_date?: string; end_date?: string; search?: string; skip?: number; limit?: number }) => 
+  getTransactions: (params?: {
+    start_date?: string;
+    end_date?: string;
+    search?: string;
+    payment_method?: string;
+    skip?: number;
+    limit?: number;
+    paginated?: boolean;
+  }) => 
     api.get('/pos/transactions', { params }),
   getTransaction: (id: number) => 
     api.get(`/pos/transactions/${id}`),
