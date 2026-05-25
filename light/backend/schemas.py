@@ -349,6 +349,17 @@ class ExpenseResponse(ExpenseBase):
         from_attributes = True
 
 
+class ExpensePageResponse(BaseModel):
+    items: List[ExpenseResponse]
+    total: int
+    skip: int
+    limit: int
+    total_amount: float
+
+    class Config:
+        from_attributes = True
+
+
 # Sales User Schemas
 class SalesUserBase(BaseModel):
     name: str

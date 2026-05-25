@@ -122,7 +122,7 @@ export const reportsAPI = {
 
 // Expense API
 export const expenseAPI = {
-  getAll: (params?: { start_date?: string; end_date?: string; category?: string }) => 
+  getAll: (params?: { start_date?: string; end_date?: string; category?: string; skip?: number; limit?: number; paginated?: boolean }) => 
     api.get('/expenses', { params }),
   getById: (id: number) => 
     api.get(`/expenses/${id}`),

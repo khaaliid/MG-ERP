@@ -35,7 +35,7 @@ from schemas import (
     POSTransactionCreate, POSTransactionResponse, POSTransactionPageResponse,
     SalesReportResponse, InventoryReportResponse, LedgerReportResponse,
     Token, UserLogin, UserCreate, UserUpdate, UserResponse,
-    ExpenseCreate, ExpenseUpdate, ExpenseResponse,
+    ExpenseCreate, ExpenseUpdate, ExpenseResponse, ExpensePageResponse,
     SalesUserCreate, SalesUserUpdate, SalesUserResponse,
     SalesUserPerformanceReportResponse
 )
@@ -1389,11 +1389,14 @@ def get_sales_user_performance_report(
 
 
 # ============= Expense Routes =============
-@router.get("/expenses", response_model=List[ExpenseResponse])
+@router.get("/expenses", response_model=Union[List[ExpenseResponse], ExpensePageResponse])
 def get_expenses(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     category: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 20,
+    paginated: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_manager)
 ):
@@ -1406,7 +1409,13 @@ def get_expenses(
         query = query.filter(Expense.expense_date <= end_date)
     if category:
         query = query.filter(Expense.category == category)
-    
+
+    if paginated:
+        total = query.count()
+        total_amount = query.with_entities(func.sum(Expense.amount)).scalar() or 0.0
+        items = query.order_by(Expense.expense_date.desc()).offset(skip).limit(limit).all()
+        return ExpensePageResponse(items=items, total=total, skip=skip, limit=limit, total_amount=total_amount)
+
     return query.order_by(Expense.expense_date.desc()).all()
 
 

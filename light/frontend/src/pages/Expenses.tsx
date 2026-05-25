@@ -42,6 +42,10 @@ function Expenses() {
   const [showForm, setShowForm] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalAmount, setTotalAmount] = useState(0);
 
   const [formData, setFormData] = useState({
     expense_date: new Date().toISOString().split('T')[0],
@@ -55,16 +59,31 @@ function Expenses() {
   });
 
   useEffect(() => {
-    fetchExpenses();
+    void fetchPage(1, 20, { categoryFilter: '' });
   }, []);
 
-  const fetchExpenses = async () => {
+  const fetchPage = async (
+    nextPage: number,
+    nextPageSize: number,
+    overrides?: { categoryFilter?: string }
+  ) => {
+    setLoading(true);
+    const filter = overrides?.categoryFilter !== undefined ? overrides.categoryFilter : categoryFilter;
     try {
-      const response = await expenseAPI.getAll({ category: categoryFilter || undefined });
-      setExpenses(response.data);
+      const response = await expenseAPI.getAll({
+        category: filter || undefined,
+        skip: (nextPage - 1) * nextPageSize,
+        limit: nextPageSize,
+        paginated: true,
+      });
+      const data = response.data;
+      setExpenses(data.items);
+      setTotalCount(data.total);
+      setTotalAmount(data.total_amount);
+      setPage(nextPage);
+      setPageSize(nextPageSize);
     } catch (error) {
       console.error('Error fetching expenses:', error);
-      alert('Failed to load expenses');
     } finally {
       setLoading(false);
     }
@@ -87,7 +106,7 @@ function Expenses() {
       }
 
       resetForm();
-      fetchExpenses();
+      void fetchPage(page, pageSize);
     } catch (error: any) {
       console.error('Error saving expense:', error);
       alert(error.response?.data?.detail || 'Failed to save expense');
@@ -114,7 +133,9 @@ function Expenses() {
 
     try {
       await expenseAPI.delete(id);
-      fetchExpenses();
+      const newTotal = totalCount - 1;
+      const maxPage = Math.ceil(newTotal / pageSize) || 1;
+      void fetchPage(Math.min(page, maxPage), pageSize);
     } catch (error: any) {
       console.error('Error deleting expense:', error);
       alert(error.response?.data?.detail || 'Failed to delete expense');
@@ -136,7 +157,7 @@ function Expenses() {
     setShowForm(false);
   };
 
-  const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+  const totalPages = Math.ceil(totalCount / pageSize);
 
   return (
     <div className="page">
@@ -163,19 +184,19 @@ function Expenses() {
         <div className="card">
           <h3>{t('total_expenses')}</h3>
           <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#e74c3c' }}>
-            ${totalExpenses.toFixed(2)}
+            ${totalAmount.toFixed(2)}
           </div>
         </div>
         <div className="card">
           <h3>{t('expenses_total_records')}</h3>
           <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#3498db' }}>
-            {expenses.length}
+            {totalCount}
           </div>
         </div>
         <div className="card">
           <h3>{t('expenses_average_expense')}</h3>
           <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#9b59b6' }}>
-            ${expenses.length ? (totalExpenses / expenses.length).toFixed(2) : '0.00'}
+            ${totalCount ? (totalAmount / totalCount).toFixed(2) : '0.00'}
           </div>
         </div>
       </div>
@@ -296,8 +317,9 @@ function Expenses() {
           <select
             value={categoryFilter}
             onChange={(e) => {
-              setCategoryFilter(e.target.value);
-              fetchExpenses();
+              const val = e.target.value;
+              setCategoryFilter(val);
+              void fetchPage(1, pageSize, { categoryFilter: val });
             }}
             style={{ maxWidth: '200px' }}
           >
@@ -373,6 +395,45 @@ function Expenses() {
               ))}
             </tbody>
           </table>
+        )}
+        {/* Pagination */}
+        {totalCount > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '14px' }}>{t('expenses_rows_per_page')}:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => void fetchPage(1, Number(e.target.value))}
+                style={{ padding: '4px 8px' }}
+              >
+                {[10, 20, 50, 100].map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px' }}>
+              <span>
+                {t('expenses_page_summary', {
+                  from: (page - 1) * pageSize + 1,
+                  to: Math.min(page * pageSize, totalCount),
+                  total: totalCount,
+                })}
+              </span>
+              <button
+                className="button button-sm button-secondary"
+                onClick={() => void fetchPage(page - 1, pageSize)}
+                disabled={page <= 1}
+              >
+                {t('expenses_previous')}
+              </button>
+              <span>{t('expenses_page_x_of_y', { page, totalPages })}</span>
+              <button
+                className="button button-sm button-secondary"
+                onClick={() => void fetchPage(page + 1, pageSize)}
+                disabled={page >= totalPages}
+              >
+                {t('expenses_next')}
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>
