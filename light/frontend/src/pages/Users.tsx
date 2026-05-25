@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { authAPI } from '../api';
 import { useAuth } from '../AuthContext';
+import '../i18n';
 
 interface User {
   id: number;
@@ -14,6 +16,7 @@ interface User {
 }
 
 function Users() {
+  const { t } = useTranslation();
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +45,7 @@ function Users() {
       setUsers(response.data);
     } catch (error) {
       console.error('Error fetching users:', error);
-      alert('Failed to load users');
+      alert(t('users_load_failed'));
     } finally {
       setLoading(false);
     }
@@ -52,22 +55,22 @@ function Users() {
     const newErrors: Record<string, string> = {};
 
     if (!formData.username.trim()) {
-      newErrors.username = 'Username is required';
+      newErrors.username = t('users_username_required');
     } else if (formData.username.length < 3) {
-      newErrors.username = 'Username must be at least 3 characters';
+      newErrors.username = t('users_username_min_length');
     }
 
     // Password validation
     if (!editingUser && !formData.password.trim()) {
       // Password is required for new users
-      newErrors.password = 'Password is required for new users';
+      newErrors.password = t('users_password_required_new');
     } else if (formData.password.trim() && formData.password.trim().length < 6) {
       // Password must be at least 6 characters if provided
-      newErrors.password = 'Password must be at least 6 characters';
+      newErrors.password = t('users_password_min_length');
     }
 
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Invalid email format';
+      newErrors.email = t('users_email_invalid');
     }
 
     setErrors(newErrors);
@@ -109,10 +112,10 @@ function Users() {
 
       resetForm();
       fetchUsers();
-      alert(editingUser ? 'User updated successfully' : 'User created successfully');
+      alert(editingUser ? t('users_updated_success') : t('users_created_success'));
     } catch (error: any) {
       console.error('Error saving user:', error);
-      alert(error.response?.data?.detail || 'Failed to save user');
+      alert(error.response?.data?.detail || t('users_save_failed'));
     }
   };
 
@@ -132,19 +135,19 @@ function Users() {
 
   const handleDelete = async (id: number) => {
     if (id === currentUser?.id) {
-      alert('Cannot delete your own account');
+      alert(t('users_cannot_delete_self'));
       return;
     }
 
-    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
+    if (!confirm(t('users_confirm_delete'))) return;
 
     try {
       await authAPI.deleteUser(id);
       fetchUsers();
-      alert('User deleted successfully');
+      alert(t('users_deleted_success'));
     } catch (error: any) {
       console.error('Error deleting user:', error);
-      alert(error.response?.data?.detail || 'Failed to delete user');
+      alert(error.response?.data?.detail || t('users_delete_failed'));
     }
   };
 
@@ -169,14 +172,14 @@ function Users() {
     <div className="page">
       <div className="page-header">
         <div>
-          <h1>👥 Users Management</h1>
-          <p>Manage system users and their roles</p>
+          <h1>👥 {t('user_management_title')}</h1>
+          <p>{t('users_subtitle')}</p>
         </div>
         <button
           className="button button-primary"
           onClick={() => setShowForm(!showForm)}
         >
-          {showForm ? '✖ Cancel' : '➕ Add User'}
+          {showForm ? `✖ ${t('cancel')}` : `➕ ${t('users_add_button')}`}
         </button>
       </div>
 
@@ -190,19 +193,19 @@ function Users() {
         }}
       >
         <div className="card">
-          <h3>Total Users</h3>
+          <h3>{t('users_total_users')}</h3>
           <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#3498db' }}>
             {users.length}
           </div>
         </div>
         <div className="card">
-          <h3>Active Users</h3>
+          <h3>{t('users_active_users')}</h3>
           <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#2ecc71' }}>
             {activeUsers.length}
           </div>
         </div>
         <div className="card">
-          <h3>Inactive Users</h3>
+          <h3>{t('users_inactive_users')}</h3>
           <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#e74c3c' }}>
             {users.length - activeUsers.length}
           </div>
@@ -212,11 +215,11 @@ function Users() {
       {/* Add/Edit Form */}
       {showForm && (
         <div className="card" style={{ marginBottom: '30px' }}>
-          <h2>{editingUser ? 'Edit User' : 'Add New User'}</h2>
+          <h2>{editingUser ? t('users_edit_form_title') : t('users_add_form_title')}</h2>
           <form onSubmit={handleSubmit}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
               <div className="form-group">
-                <label>Username *</label>
+                <label>{t('username')} *</label>
                 <input
                   type="text"
                   required
@@ -227,7 +230,7 @@ function Users() {
                       setErrors({ ...errors, username: '' });
                     }
                   }}
-                  placeholder="Enter username"
+                  placeholder={t('enter_username')}
                   disabled={!!editingUser}
                 />
                 {errors.username && (
@@ -236,7 +239,7 @@ function Users() {
               </div>
 
               <div className="form-group">
-                <label>Password {editingUser ? '(optional to change)' : '*'}</label>
+                <label>{editingUser ? t('users_password_edit_label') : `${t('password')} *`}</label>
                 <input
                   type="password"
                   required={!editingUser}
@@ -247,7 +250,7 @@ function Users() {
                       setErrors({ ...errors, password: '' });
                     }
                   }}
-                  placeholder={editingUser ? 'Leave empty to keep current password' : 'Enter password'}
+                  placeholder={editingUser ? t('users_password_keep_placeholder') : t('enter_password')}
                 />
                 {errors.password && (
                   <span style={{ color: '#e74c3c', fontSize: '12px' }}>{errors.password}</span>
@@ -255,17 +258,17 @@ function Users() {
               </div>
 
               <div className="form-group">
-                <label>Full Name</label>
+                <label>{t('users_full_name')}</label>
                 <input
                   type="text"
                   value={formData.full_name}
                   onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                  placeholder="Enter full name"
+                  placeholder={t('users_full_name_placeholder')}
                 />
               </div>
 
               <div className="form-group">
-                <label>Email</label>
+                <label>{t('users_email')}</label>
                 <input
                   type="email"
                   value={formData.email}
@@ -283,36 +286,36 @@ function Users() {
               </div>
 
               <div className="form-group">
-                <label>Role *</label>
+                <label>{t('users_role')} *</label>
                 <select
                   value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                   required
                 >
-                  <option value="cashier">Cashier</option>
-                  <option value="manager">Manager</option>
-                  <option value="super_admin">Super Admin</option>
+                  <option value="cashier">{t('users_role_cashier')}</option>
+                  <option value="manager">{t('users_role_manager')}</option>
+                  <option value="super_admin">{t('users_role_super_admin')}</option>
                 </select>
               </div>
 
               <div className="form-group">
-                <label>Status</label>
+                <label>{t('status')}</label>
                 <select
                   value={formData.is_active ? 'true' : 'false'}
                   onChange={(e) => setFormData({ ...formData, is_active: e.target.value === 'true' })}
                 >
-                  <option value="true">Active</option>
-                  <option value="false">Inactive</option>
+                  <option value="true">{t('users_status_active')}</option>
+                  <option value="false">{t('users_status_inactive')}</option>
                 </select>
               </div>
             </div>
 
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
               <button type="submit" className="button button-primary">
-                {editingUser ? '💾 Update User' : '➕ Add User'}
+                {editingUser ? `💾 ${t('users_update_button')}` : `➕ ${t('users_add_button')}`}
               </button>
               <button type="button" className="button button-secondary" onClick={resetForm}>
-                Cancel
+                {t('cancel')}
               </button>
             </div>
           </form>
@@ -327,29 +330,29 @@ function Users() {
             checked={showInactive}
             onChange={(e) => setShowInactive(e.target.checked)}
           />
-          <span style={{ fontWeight: 'bold' }}>Show inactive users</span>
+          <span style={{ fontWeight: 'bold' }}>{t('users_show_inactive')}</span>
         </label>
       </div>
 
       {/* Users Table */}
       <div className="card">
-        <h2>Users</h2>
+        <h2>{t('users_table_title')}</h2>
         {loading ? (
-          <p>Loading users...</p>
+          <p>{t('users_loading')}</p>
         ) : displayedUsers.length === 0 ? (
-          <p>No users found. Add your first user to get started.</p>
+          <p>{t('users_no_records')}</p>
         ) : (
           <table className="data-table">
             <thead>
               <tr>
-                <th>Username</th>
-                <th>Full Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Last Login</th>
-                <th>Created</th>
-                <th>Actions</th>
+                <th>{t('username')}</th>
+                <th>{t('users_full_name')}</th>
+                <th>{t('users_email')}</th>
+                <th>{t('users_role')}</th>
+                <th>{t('status')}</th>
+                <th>{t('users_last_login')}</th>
+                <th>{t('users_created')}</th>
+                <th>{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -384,7 +387,7 @@ function Users() {
                               : '#0f5132',
                       }}
                     >
-                      {user.role.toUpperCase().replace('_', ' ')}
+                      {t(`users_role_${user.role}`)}
                     </span>
                   </td>
                   <td>
@@ -398,7 +401,7 @@ function Users() {
                         color: user.is_active ? '#0f5132' : '#721c24',
                       }}
                     >
-                      {user.is_active ? '✓ Active' : '✗ Inactive'}
+                      {user.is_active ? `✓ ${t('users_status_active')}` : `✗ ${t('users_status_inactive')}`}
                     </span>
                   </td>
                   <td>{user.last_login ? new Date(user.last_login).toLocaleString() : '-'}</td>
@@ -411,17 +414,17 @@ function Users() {
                           onClick={() => handleEdit(user)}
                           style={{ marginRight: '5px' }}
                         >
-                          ✏️ Edit
+                          ✏️ {t('edit')}
                         </button>
                         <button
                           className="button button-sm button-danger"
                           onClick={() => handleDelete(user.id)}
                         >
-                          🗑️ Delete
+                          🗑️ {t('users_delete_btn')}
                         </button>
                       </>
                     {user.id !== currentUser?.id ? (<span></span>) : (
-                      <span style={{ color: '#95a5a6', fontSize: '12px' }}>Current user</span>
+                      <span style={{ color: '#95a5a6', fontSize: '12px' }}>{t('users_current_user')}</span>
                     )}
                   </td>
                 </tr>
