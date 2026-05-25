@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { inventoryAPI } from '../api';
+import { api, inventoryAPI } from '../api';
 import { useTranslation } from 'react-i18next';
 import '../i18n';
 
@@ -24,6 +24,9 @@ function Inventory() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showBarcodeModal, setShowBarcodeModal] = useState(false);
   const [selectedItemForBarcode, setSelectedItemForBarcode] = useState<InventoryItem | null>(null);
+  const [barcodeImageUrl, setBarcodeImageUrl] = useState<string | null>(null);
+  const [barcodeImageLoading, setBarcodeImageLoading] = useState(false);
+  const [barcodeImageError, setBarcodeImageError] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     sku: '',
@@ -35,11 +38,49 @@ function Inventory() {
     reorder_level: '10',
   });
 
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   useEffect(() => {
     loadItems();
   }, []);
+
+  useEffect(() => {
+    let currentBlobUrl: string | null = null;
+
+    const loadBarcodeImage = async () => {
+      if (!showBarcodeModal || !selectedItemForBarcode) {
+        setBarcodeImageUrl(null);
+        setBarcodeImageError('');
+        setBarcodeImageLoading(false);
+        return;
+      }
+
+      try {
+        setBarcodeImageLoading(true);
+        setBarcodeImageError('');
+
+        const response = await api.get(`/inventory/${selectedItemForBarcode.id}/barcode`, {
+          responseType: 'blob',
+        });
+
+        currentBlobUrl = URL.createObjectURL(response.data);
+        setBarcodeImageUrl(currentBlobUrl);
+      } catch (err: any) {
+        setBarcodeImageUrl(null);
+        setBarcodeImageError(err.response?.data?.detail || 'Failed to load barcode image');
+      } finally {
+        setBarcodeImageLoading(false);
+      }
+    };
+
+    loadBarcodeImage();
+
+    return () => {
+      if (currentBlobUrl) {
+        URL.revokeObjectURL(currentBlobUrl);
+      }
+    };
+  }, [showBarcodeModal, selectedItemForBarcode]);
 
   const loadItems = async () => {
     try {
@@ -157,23 +198,18 @@ function Inventory() {
         }
 
         // Download ESC/POS barcode data
-        const response = await fetch(`http://localhost:8005/api/inventory/${selectedItemForBarcode.id}/barcode/escpos`);
-        
+        const response = await api.get(`/inventory/${selectedItemForBarcode.id}/barcode/escpos`, {
+          responseType: 'arraybuffer',
+        });
+
         if (response.status === 503) {
           alert('ESC/POS library not available on server.\n\n' +
                 'Thermal printing requires the python-escpos library.\n\n' +
                 'You can use the "Print Image" button for regular printers.');
           return;
         }
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.detail || 'Failed to generate ESC/POS barcode');
-        }
-        
-        const blob = await response.blob();
-        const arrayBuffer = await blob.arrayBuffer();
-        const data = new Uint8Array(arrayBuffer);
+
+        const data = new Uint8Array(response.data);
         
         // Request serial port access
         const port = await (navigator as any).serial.requestPort();
@@ -192,6 +228,13 @@ function Inventory() {
         
       } catch (error: any) {
         console.error('Error printing barcode:', error);
+
+        if (error.response?.status === 503) {
+          alert('ESC/POS library not available on server.\n\n' +
+                'Thermal printing requires the python-escpos library.\n\n' +
+                'You can use the "Print Image" button for regular printers.');
+          return;
+        }
         
         if (error.name === 'NotFoundError') {
           alert('❌ No printer selected.\n\nPlease select your thermal printer when prompted.');
@@ -209,9 +252,13 @@ function Inventory() {
   const handlePrintBarcodeImage = () => {
     // Fallback: Print barcode as image (for non-thermal printers)
     if (selectedItemForBarcode) {
+      if (!barcodeImageUrl) {
+        alert(barcodeImageError || 'Barcode image not loaded yet. Please try again.');
+        return;
+      }
+
       const printWindow = window.open('', '_blank');
       if (printWindow) {
-        const barcodeUrl = `http://localhost:8005/api/inventory/${selectedItemForBarcode.id}/barcode`;
         printWindow.document.write(`
           <html>
             <head>
@@ -237,7 +284,7 @@ function Inventory() {
               <h2>${selectedItemForBarcode.name}</h2>
               <div class="info">SKU: ${selectedItemForBarcode.sku}</div>
               <div class="info">Price: $${selectedItemForBarcode.unit_price.toFixed(2)}</div>
-              <img src="${barcodeUrl}" alt="Barcode" />
+              <img src="${barcodeImageUrl}" alt="Barcode" />
               <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">Print</button>
             </body>
           </html>
@@ -534,11 +581,19 @@ function Inventory() {
               SKU: {selectedItemForBarcode.sku} | Price: ${selectedItemForBarcode.unit_price.toFixed(2)}
             </p>
             <div style={{ margin: '20px 0', padding: '20px', backgroundColor: '#f8f9fa', borderRadius: '5px' }}>
-              <img
-                src={`http://localhost:8005/api/inventory/${selectedItemForBarcode.id}/barcode`}
-                alt="Barcode"
-                style={{ maxWidth: '100%', height: 'auto' }}
-              />
+              {barcodeImageLoading ? (
+                <p>{t('loading')}...</p>
+              ) : barcodeImageError ? (
+                <p style={{ color: 'red' }}>{barcodeImageError}</p>
+              ) : barcodeImageUrl ? (
+                <img
+                  src={barcodeImageUrl}
+                  alt="Barcode"
+                  style={{ maxWidth: '100%', height: 'auto' }}
+                />
+              ) : (
+                <p style={{ color: '#7f8c8d' }}>No barcode image available.</p>
+              )}
             </div>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
               <button
