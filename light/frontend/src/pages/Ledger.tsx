@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ledgerAPI } from '../api';
+import { useTranslation } from 'react-i18next';
+import '../i18n';
 
 interface LedgerRecord {
   id: number;
@@ -15,6 +17,7 @@ interface LedgerRecord {
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
 function Ledger() {
+  const { t } = useTranslation();
   const [records, setRecords] = useState<LedgerRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -94,8 +97,8 @@ function Ledger() {
   return (
     <div>
       <div className="page-header">
-        <h1>Ledger Records</h1>
-        <p>View all financial transactions</p>
+        <h1>{t('ledger_page_title')}</h1>
+        <p>{t('ledger_subtitle')}</p>
       </div>
 
       {error && <div className="error">{error}</div>}
@@ -103,22 +106,22 @@ function Ledger() {
       <div className="card">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 16, alignItems: 'flex-end' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label style={{ fontWeight: '500' }}>Filter by Type</label>
+            <label style={{ fontWeight: '500' }}>{t('ledger_filter_by_type')}</label>
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
               style={{ padding: '10px', borderRadius: '5px', border: '1px solid #ddd' }}
             >
-              <option value="">All Types</option>
-              <option value="sale">Sales</option>
-              <option value="purchase">Purchases</option>
-              <option value="return">Returns</option>
-              <option value="adjustment">Adjustments</option>
+              <option value="">{t('ledger_all_types')}</option>
+              <option value="sale">{t('ledger_type_sale')}</option>
+              <option value="purchase">{t('ledger_type_purchase')}</option>
+              <option value="return">{t('ledger_type_return')}</option>
+              <option value="adjustment">{t('ledger_type_adjustment')}</option>
             </select>
           </div>
 
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label style={{ fontWeight: '500' }}>From</label>
+            <label style={{ fontWeight: '500' }}>{t('ledger_from')}</label>
             <input
               type="date"
               value={startDate}
@@ -128,7 +131,7 @@ function Ledger() {
           </div>
 
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label style={{ fontWeight: '500' }}>To</label>
+            <label style={{ fontWeight: '500' }}>{t('ledger_to')}</label>
             <input
               type="date"
               value={endDate}
@@ -137,23 +140,23 @@ function Ledger() {
             />
           </div>
 
-          <button className="button button-primary" onClick={handleApply}>Apply Filters</button>
-          <button className="button" onClick={handleReset}>Reset</button>
+          <button className="button button-primary" onClick={handleApply}>{t('ledger_apply_filters')}</button>
+          <button className="button" onClick={handleReset}>{t('ledger_reset')}</button>
         </div>
 
         {loading ? (
-          <div className="loading">Loading...</div>
+          <div className="loading">{t('ledger_loading')}</div>
         ) : (
           <>
             <table className="table">
               <thead>
                 <tr>
-                  <th>Date</th>
-                  <th>Type</th>
-                  <th>Description</th>
-                  <th>Amount</th>
-                  <th>Balance</th>
-                  <th>Payment Method</th>
+                  <th>{t('ledger_col_date')}</th>
+                  <th>{t('ledger_col_type')}</th>
+                  <th>{t('ledger_col_description')}</th>
+                  <th>{t('ledger_col_amount')}</th>
+                  <th>{t('ledger_col_balance')}</th>
+                  <th>{t('ledger_col_payment_method')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -195,18 +198,22 @@ function Ledger() {
 
             {records.length === 0 && (
               <p style={{ textAlign: 'center', padding: '40px', color: '#7f8c8d' }}>
-                No ledger records found
+                {t('ledger_no_records')}
               </p>
             )}
 
             {totalCount > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginTop: 14, flexWrap: 'wrap' }}>
                 <div style={{ color: '#7f8c8d', fontSize: 14 }}>
-                  Showing {totalCount === 0 ? 0 : (page - 1) * pageSize + 1}–{Math.min(page * pageSize, totalCount)} of {totalCount}
+                  {t('ledger_page_summary', {
+                    from: totalCount === 0 ? 0 : (page - 1) * pageSize + 1,
+                    to: Math.min(page * pageSize, totalCount),
+                    total: totalCount,
+                  })}
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <label style={{ fontSize: 14 }}>Rows per page</label>
+                  <label style={{ fontSize: 14 }}>{t('ledger_rows_per_page')}</label>
                   <select
                     value={pageSize}
                     onChange={(e) => {
@@ -224,11 +231,11 @@ function Ledger() {
                     onClick={() => void fetchPage(page - 1, pageSize, { filterType, startDate, endDate })}
                     disabled={page <= 1}
                   >
-                    Previous
+                    {t('ledger_previous')}
                   </button>
 
                   <span style={{ minWidth: 120, textAlign: 'center' }}>
-                    Page {page} of {totalPages}
+                    {t('ledger_page_x_of_y', { page, totalPages })}
                   </span>
 
                   <button
@@ -236,7 +243,7 @@ function Ledger() {
                     onClick={() => void fetchPage(page + 1, pageSize, { filterType, startDate, endDate })}
                     disabled={page >= totalPages}
                   >
-                    Next
+                    {t('ledger_next')}
                   </button>
                 </div>
               </div>
