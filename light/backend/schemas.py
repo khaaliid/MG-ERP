@@ -176,6 +176,16 @@ class POSTransactionPageResponse(BaseModel):
         from_attributes = True
 
 
+class LedgerPageResponse(BaseModel):
+    items: List[LedgerRecordResponse]
+    total: int
+    skip: int
+    limit: int
+
+    class Config:
+        from_attributes = True
+
+
 # POS Cashier Closure Schemas
 class POSClosureRequest(BaseModel):
     sales_user_id: int

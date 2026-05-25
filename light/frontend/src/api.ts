@@ -95,7 +95,14 @@ export const posAPI = {
 
 // Ledger API
 export const ledgerAPI = {
-  getRecords: (params?: { transaction_type?: string }) => 
+  getRecords: (params?: {
+    transaction_type?: string;
+    start_date?: string;
+    end_date?: string;
+    skip?: number;
+    limit?: number;
+    paginated?: boolean;
+  }) => 
     api.get('/ledger', { params }),
   getRecord: (id: number) => 
     api.get(`/ledger/${id}`),

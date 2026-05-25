@@ -30,7 +30,7 @@ except (ImportError, FileNotFoundError, Exception) as e:
 from database import get_db
 from models import LedgerRecord, InventoryItem, POSTransaction, POSItem, TransactionType, PaymentMethod, User, UserRole, Expense, SalesUser, Refund, RefundItem
 from schemas import (
-    LedgerRecordCreate, LedgerRecordResponse,
+    LedgerRecordCreate, LedgerRecordResponse, LedgerPageResponse,
     InventoryItemCreate, InventoryItemUpdate, InventoryItemResponse,
     POSTransactionCreate, POSTransactionResponse, POSTransactionPageResponse,
     SalesReportResponse, InventoryReportResponse, LedgerReportResponse,
@@ -235,11 +235,14 @@ def delete_user(
 
 
 # ============= Ledger Routes =============
-@router.get("/ledger", response_model=List[LedgerRecordResponse])
+@router.get("/ledger", response_model=Union[List[LedgerRecordResponse], LedgerPageResponse])
 def get_ledger_records(
     skip: int = 0,
-    limit: int = 100,
+    limit: int = Query(50, ge=1, le=500),
     transaction_type: Optional[TransactionType] = None,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    paginated: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_manager)
 ):
@@ -247,7 +250,15 @@ def get_ledger_records(
     query = db.query(LedgerRecord)
     if transaction_type:
         query = query.filter(LedgerRecord.transaction_type == transaction_type)
-    return query.order_by(LedgerRecord.transaction_date.desc()).offset(skip).limit(limit).all()
+    if start_date:
+        query = query.filter(LedgerRecord.transaction_date >= start_date)
+    if end_date:
+        query = query.filter(LedgerRecord.transaction_date <= end_date)
+    total = query.count()
+    records = query.order_by(LedgerRecord.transaction_date.desc()).offset(skip).limit(limit).all()
+    if paginated:
+        return {"items": records, "total": total, "skip": skip, "limit": limit}
+    return records
 
 
 @router.post("/ledger", response_model=LedgerRecordResponse)
