@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { expenseAPI } from '../api';
+import '../i18n';
 
 interface Expense {
   id: number;
@@ -34,6 +36,7 @@ const PAYMENT_METHODS = [
 ];
 
 function Expenses() {
+  const { t } = useTranslation();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -107,7 +110,7 @@ function Expenses() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this expense?')) return;
+    if (!confirm(t('expenses_confirm_delete'))) return;
 
     try {
       await expenseAPI.delete(id);
@@ -139,14 +142,14 @@ function Expenses() {
     <div className="page">
       <div className="page-header">
         <div>
-          <h1>💰 Expenses</h1>
-          <p>Track and manage business expenses</p>
+          <h1>💰 {t('expenses_title')}</h1>
+          <p>{t('expenses_subtitle')}</p>
         </div>
         <button
           className="button button-primary"
           onClick={() => setShowForm(!showForm)}
         >
-          {showForm ? '✖ Cancel' : '➕ Add Expense'}
+          {showForm ? `✖ ${t('cancel')}` : `➕ ${t('expenses_add_button')}`}
         </button>
       </div>
 
@@ -158,19 +161,19 @@ function Expenses() {
         marginBottom: '30px' 
       }}>
         <div className="card">
-          <h3>Total Expenses</h3>
+          <h3>{t('total_expenses')}</h3>
           <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#e74c3c' }}>
             ${totalExpenses.toFixed(2)}
           </div>
         </div>
         <div className="card">
-          <h3>Total Records</h3>
+          <h3>{t('expenses_total_records')}</h3>
           <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#3498db' }}>
             {expenses.length}
           </div>
         </div>
         <div className="card">
-          <h3>Average Expense</h3>
+          <h3>{t('expenses_average_expense')}</h3>
           <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#9b59b6' }}>
             ${expenses.length ? (totalExpenses / expenses.length).toFixed(2) : '0.00'}
           </div>
@@ -180,11 +183,11 @@ function Expenses() {
       {/* Add/Edit Form */}
       {showForm && (
         <div className="card" style={{ marginBottom: '30px' }}>
-          <h2>{editingExpense ? 'Edit Expense' : 'Add New Expense'}</h2>
+          <h2>{editingExpense ? t('expenses_edit_form_title') : t('expenses_add_form_title')}</h2>
           <form onSubmit={handleSubmit}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
               <div className="form-group">
-                <label>Date *</label>
+                <label>{t('ledger_col_date')} *</label>
                 <input
                   type="date"
                   required
@@ -194,31 +197,31 @@ function Expenses() {
               </div>
 
               <div className="form-group">
-                <label>Category *</label>
+                <label>{t('category')} *</label>
                 <select
                   required
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 >
                   {CATEGORIES.map(cat => (
-                    <option key={cat.value} value={cat.value}>{cat.label}</option>
+                    <option key={cat.value} value={cat.value}>{t(`expenses_cat_${cat.value}`)}</option>
                   ))}
                 </select>
               </div>
 
               <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                <label>Description *</label>
+                <label>{t('ledger_col_description')} *</label>
                 <input
                   type="text"
                   required
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Enter expense description"
+                  placeholder={t('expenses_description_placeholder')}
                 />
               </div>
 
               <div className="form-group">
-                <label>Amount *</label>
+                <label>{t('ledger_col_amount')} *</label>
                 <input
                   type="number"
                   required
@@ -231,44 +234,44 @@ function Expenses() {
               </div>
 
               <div className="form-group">
-                <label>Payment Method *</label>
+                <label>{t('ledger_col_payment_method')} *</label>
                 <select
                   required
                   value={formData.payment_method}
                   onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
                 >
                   {PAYMENT_METHODS.map(pm => (
-                    <option key={pm.value} value={pm.value}>{pm.label}</option>
+                    <option key={pm.value} value={pm.value}>{t(`expenses_payment_${pm.value}`)}</option>
                   ))}
                 </select>
               </div>
 
               <div className="form-group">
-                <label>Vendor</label>
+                <label>{t('expenses_vendor')}</label>
                 <input
                   type="text"
                   value={formData.vendor}
                   onChange={(e) => setFormData({ ...formData, vendor: e.target.value })}
-                  placeholder="Vendor name"
+                  placeholder={t('expenses_vendor_placeholder')}
                 />
               </div>
 
               <div className="form-group">
-                <label>Receipt Number</label>
+                <label>{t('expenses_receipt_number')}</label>
                 <input
                   type="text"
                   value={formData.receipt_number}
                   onChange={(e) => setFormData({ ...formData, receipt_number: e.target.value })}
-                  placeholder="Receipt #"
+                  placeholder={t('expenses_receipt_placeholder')}
                 />
               </div>
 
               <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                <label>Notes</label>
+                <label>{t('transactions_history_notes')}</label>
                 <textarea
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  placeholder="Additional notes"
+                  placeholder={t('expenses_notes_placeholder')}
                   rows={3}
                 />
               </div>
@@ -276,10 +279,10 @@ function Expenses() {
 
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
               <button type="submit" className="button button-primary">
-                {editingExpense ? '💾 Update Expense' : '➕ Add Expense'}
+                {editingExpense ? `💾 ${t('expenses_update_button')}` : `➕ ${t('expenses_add_button')}`}
               </button>
               <button type="button" className="button button-secondary" onClick={resetForm}>
-                Cancel
+                {t('cancel')}
               </button>
             </div>
           </form>
@@ -289,7 +292,7 @@ function Expenses() {
       {/* Filter */}
       <div className="card" style={{ marginBottom: '20px', padding: '15px' }}>
         <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-          <label style={{ fontWeight: 'bold' }}>Filter by Category:</label>
+          <label style={{ fontWeight: 'bold' }}>{t('expenses_filter_by_category')}:</label>
           <select
             value={categoryFilter}
             onChange={(e) => {
@@ -298,9 +301,9 @@ function Expenses() {
             }}
             style={{ maxWidth: '200px' }}
           >
-            <option value="">All Categories</option>
+            <option value="">{t('expenses_all_categories')}</option>
             {CATEGORIES.map(cat => (
-              <option key={cat.value} value={cat.value}>{cat.label}</option>
+              <option key={cat.value} value={cat.value}>{t(`expenses_cat_${cat.value}`)}</option>
             ))}
           </select>
         </div>
@@ -308,23 +311,23 @@ function Expenses() {
 
       {/* Expenses Table */}
       <div className="card">
-        <h2>Expense Records</h2>
+        <h2>{t('expenses_records_heading')}</h2>
         {loading ? (
-          <p>Loading expenses...</p>
+          <p>{t('expenses_loading')}</p>
         ) : expenses.length === 0 ? (
-          <p>No expenses found. Add your first expense to get started.</p>
+          <p>{t('expenses_no_records')}</p>
         ) : (
           <table className="data-table">
             <thead>
               <tr>
-                <th>Date</th>
-                <th>Category</th>
-                <th>Description</th>
-                <th>Vendor</th>
-                <th>Amount</th>
-                <th>Payment Method</th>
-                <th>Receipt #</th>
-                <th>Actions</th>
+                <th>{t('ledger_col_date')}</th>
+                <th>{t('category')}</th>
+                <th>{t('ledger_col_description')}</th>
+                <th>{t('expenses_vendor')}</th>
+                <th>{t('ledger_col_amount')}</th>
+                <th>{t('ledger_col_payment_method')}</th>
+                <th>{t('expenses_col_receipt')}</th>
+                <th>{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -357,13 +360,13 @@ function Expenses() {
                       onClick={() => handleEdit(expense)}
                       style={{ marginRight: '5px' }}
                     >
-                      ✏️ Edit
+                      ✏️ {t('edit')}
                     </button>
                     <button
                       className="button button-sm button-danger"
                       onClick={() => handleDelete(expense.id)}
                     >
-                      🗑️ Delete
+                      🗑️ {t('expenses_delete_btn')}
                     </button>
                   </td>
                 </tr>
