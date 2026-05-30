@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { inventoryAPI, posAPI, salesUserAPI } from '../api';
 import { useAuth } from '../AuthContext';
+import { useTranslation } from 'react-i18next';
 
 interface CartItem {
   inventory_id: number;
@@ -26,6 +27,7 @@ interface RefundTransaction {
 
 function POS() {
   const { hasRole } = useAuth();
+  const { t } = useTranslation();
   const canManageRefunds = hasRole('manager', 'super_admin');
   const [items, setItems] = useState<any[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -139,7 +141,7 @@ function POS() {
 
   const handleCheckout = async () => {
     if (cart.length === 0) {
-      alert('Cart is empty!');
+      alert(t('pos_cart_empty_alert'));
       return;
     }
 
@@ -147,12 +149,12 @@ function POS() {
     const received = parseFloat(paymentReceived || '0');
 
     if (received < total) {
-      alert('Insufficient payment received!');
+      alert(t('pos_insufficient_payment'));
       return;
     }
 
     if (!selectedUserId) {
-      alert('Please select a sales user!');
+      alert(t('pos_select_sales_user_alert'));
       return;
     }
 
@@ -179,10 +181,10 @@ function POS() {
       if (phone) {
         try {
           await posAPI.sendReceiptWhatsApp(response.data.id, { phone_number: phone });
-          alert('WhatsApp e-receipt sent successfully');
+          alert(t('pos_whatsapp_sent'));
         } catch (waErr: any) {
           console.error('Failed to send WhatsApp e-receipt:', waErr);
-          alert(waErr.response?.data?.detail || 'Sale completed, but WhatsApp e-receipt failed to send.');
+          alert(waErr.response?.data?.detail || t('pos_whatsapp_failed'));
         }
       }
 
@@ -193,7 +195,7 @@ function POS() {
       setDiscount('0');
       loadInventory();
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Transaction failed!');
+      alert(err.response?.data?.detail || t('pos_transaction_failed'));
     } finally {
       setLoading(false);
     }
@@ -204,21 +206,21 @@ function POS() {
     const amount = Number.parseFloat(refundAmount);
 
     if (!txId) {
-      alert('Please verify a transaction first');
+      alert(t('pos_refund_verify_first'));
       return;
     }
 
     if (!Number.isFinite(amount) || amount <= 0) {
-      alert('Invalid refund amount');
+      alert(t('pos_invalid_refund_amount'));
       return;
     }
 
     if (amount > (verifiedRefundTx?.total || 0)) {
-      alert(`Refund amount cannot exceed transaction total ($${(verifiedRefundTx?.total || 0).toFixed(2)})`);
+      alert(t('pos_refund_exceed', { total: (verifiedRefundTx?.total || 0).toFixed(2) }));
       return;
     }
 
-    if (!confirm(`Proceed with refund of $${amount.toFixed(2)} for transaction ${verifiedRefundTx?.transaction_number || txId}?`)) {
+    if (!confirm(t('pos_refund_confirm', { amount: amount.toFixed(2), transaction: verifiedRefundTx?.transaction_number || txId }))) {
       return;
     }
 
@@ -230,7 +232,7 @@ function POS() {
         restock: refundRestock,
       };
       const res = await posAPI.refundTransaction(txId, data);
-      alert('Refund processed. New balance: ' + (res.data?.new_balance ?? res.data?.newBalance));
+      alert(t('pos_refund_success', { balance: res.data?.new_balance ?? res.data?.newBalance }));
       setRefundTxId('');
       setRefundAmount('');
       setRefundReason('');
@@ -242,7 +244,7 @@ function POS() {
       loadInventory();
     } catch (err: any) {
       console.error('Refund failed:', err);
-      alert(err.response?.data?.detail || 'Refund failed');
+      alert(err.response?.data?.detail || t('pos_refund_failed'));
     } finally {
       setRefundLoading(false);
     }
@@ -259,13 +261,18 @@ function POS() {
     setVerifiedRefundTx(tx);
     setRefundTxId(tx.transaction_number || String(tx.id));
     setRefundCandidates([]);
-    setRefundLookupMessage(`Verified: ${tx.transaction_number} (Total $${(tx.total || 0).toFixed(2)})`);
+    setRefundLookupMessage(
+      t('pos_verified', {
+        transaction: tx.transaction_number,
+        total: Number(tx.total || 0).toFixed(2)
+      })
+    );
   };
 
   const verifyRefundTransaction = async () => {
     const lookup = refundTxId.trim();
     if (!lookup) {
-      alert('Enter invoice/transaction number first');
+      alert(t('pos_invoice_number'));
       return;
     }
 
@@ -290,13 +297,13 @@ function POS() {
           tx = matches[0];
         } else if (matches.length > 1) {
           setRefundCandidates(matches);
-          setRefundLookupMessage(`Found ${matches.length} matches. Select the correct transaction below.`);
+          setRefundLookupMessage(t('pos_found_matches', { count: matches.length }));
           return;
         }
       }
 
       if (!tx) {
-        setRefundLookupMessage('Transaction not found');
+        setRefundLookupMessage(t('pos_transaction_not_found'));
         setVerifiedRefundTx(null);
         return;
       }
@@ -306,9 +313,9 @@ function POS() {
       setVerifiedRefundTx(null);
       setRefundCandidates([]);
       if (err.response?.status === 404) {
-        setRefundLookupMessage('Transaction not found');
+        setRefundLookupMessage(t('pos_transaction_not_found'));
       } else {
-        setRefundLookupMessage(err.response?.data?.detail || 'Failed to verify transaction');
+        setRefundLookupMessage(err.response?.data?.detail || t('pos_verify_failed'));
       }
     } finally {
       setRefundLookupLoading(false);
@@ -319,14 +326,14 @@ function POS() {
     <div>
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
         <div>
-          <h1>Point of Sale (POS)</h1>
-          <p>Process sales transactions</p>
+          <h1>{t('pos_page_title')}</h1>
+          <p>{t('pos_page_subtitle')}</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button
             onClick={async () => {
               if (!selectedUserId) {
-                alert('Please select a sales user to close cashier for.');
+                alert(t('pos_select_user_closure'));
                 return;
               }
               try {
@@ -339,7 +346,7 @@ function POS() {
                 setShowClosureModal(true);
               } catch (err: any) {
                 console.error('Failed to compute closure:', err);
-                alert(err.response?.data?.detail || 'Failed to compute closure');
+                alert(err.response?.data?.detail || t('pos_closure_failed'));
               } finally {
                 setClosureLoading(false);
               }
@@ -347,7 +354,7 @@ function POS() {
             className="button"
             style={{ padding: '10px 14px', backgroundColor: '#3498db', color: 'white', borderRadius: 6 }}
           >
-            {closureLoading ? 'Preparing...' : 'Close Cashier'}
+            {closureLoading ? t('pos_prepare_closure') : t('pos_close_cashier')}
           </button>
 
           {canManageRefunds && (
@@ -356,7 +363,7 @@ function POS() {
               className="button"
               style={{ padding: '10px 14px', backgroundColor: '#e67e22', color: 'white', borderRadius: 6 }}
             >
-              Refund
+              {t('pos_refund')}
             </button>
           )}
         </div>
@@ -365,12 +372,12 @@ function POS() {
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
         {/* Products Section */}
         <div className="card">
-          <h3>Select Products</h3>
+          <h3>{t('pos_select_products')}</h3>
           
           {/* Sales User Selection */}
           <div className="form-group" style={{ marginBottom: '20px' }}>
             <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>
-              Sales User *
+              {t('pos_sales_user_label')}
             </label>
             <select
               value={selectedUserId || ''}
@@ -384,7 +391,7 @@ function POS() {
                 fontSize: '14px'
               }}
             >
-              <option value="">Select sales user...</option>
+              <option value="">{t('pos_select_sales_user')}</option>
               {salesUsers.map(user => (
                 <option key={user.id} value={user.id}>
                   {user.name} {user.employee_code ? `(${user.employee_code})` : ''}
@@ -396,7 +403,7 @@ function POS() {
 
           <input
             type="text"
-            placeholder="Search products..."
+            placeholder={t('pos_search_products')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{ width: '100%', padding: '10px', marginBottom: '20px', borderRadius: '5px', border: '1px solid #ddd' }}
@@ -432,7 +439,7 @@ function POS() {
                   ${item.unit_price.toFixed(2)}
                 </p>
                 <p style={{ margin: '5px 0', color: item.quantity > 0 ? '#27ae60' : '#e74c3c', fontSize: '12px' }}>
-                  Stock: {item.quantity}
+                  {t('pos_stock', { quantity: item.quantity })}
                 </p>
               </div>
             ))}
@@ -441,11 +448,11 @@ function POS() {
 
         {/* Cart Section */}
         <div className="card">
-          <h3>Cart</h3>
+          <h3>{t('pos_cart_title')}</h3>
           
           {cart.length === 0 ? (
             <p style={{ textAlign: 'center', padding: '40px', color: '#7f8c8d' }}>
-              Cart is empty
+              {t('pos_cart_empty')}
             </p>
           ) : (
             <>
@@ -495,27 +502,27 @@ function POS() {
 
               <div style={{ borderTop: '2px solid #ddd', paddingTop: '15px', marginBottom: '20px' }}>
                 <div className="form-group">
-                  <label>Customer Name (Optional)</label>
+                  <label>{t('pos_customer_name')}</label>
                   <input
                     type="text"
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Enter customer name"
+                    placeholder={t('pos_customer_name_placeholder')}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label>Phone Number (WhatsApp Optional)</label>
+                  <label>{t('pos_phone_number')}</label>
                   <input
                     type="text"
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(e.target.value)}
-                    placeholder="e.g. 201234567890"
+                    placeholder={t('pos_phone_placeholder')}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label>Discount</label>
+                  <label>{t('pos_discount')}</label>
                   <input
                     type="number"
                     step="0.01"
@@ -526,27 +533,27 @@ function POS() {
                 </div>
 
                 <div className="form-group">
-                  <label>Payment Method</label>
+                  <label>{t('pos_payment_method')}</label>
                   <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
-                    <option value="cash">Cash</option>
-                    <option value="card">Card</option>
-                    <option value="bank_transfer">Bank Transfer</option>
-                    <option value="other">Other</option>
+                    <option value="cash">{t('pos_payment_cash')}</option>
+                    <option value="card">{t('pos_payment_card')}</option>
+                    <option value="bank_transfer">{t('pos_payment_bank')}</option>
+                    <option value="other">{t('pos_payment_other')}</option>
                   </select>
                 </div>
 
                 <div style={{ fontSize: '18px', marginBottom: '10px' }}>
-                  <strong>Subtotal:</strong> ${calculateSubtotal().toFixed(2)}
+                  <strong>{t('pos_subtotal', { amount: calculateSubtotal().toFixed(2) })}</strong>
                 </div>
                 <div style={{ fontSize: '18px', marginBottom: '10px' }}>
-                  <strong>Discount:</strong> -${parseFloat(discount || '0').toFixed(2)}
+                  <strong>{t('pos_discount_amount', { amount: parseFloat(discount || '0').toFixed(2) })}</strong>
                 </div>
                 <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#27ae60', marginBottom: '15px' }}>
-                  <strong>Total:</strong> ${calculateTotal().toFixed(2)}
+                  <strong>{t('pos_total', { amount: calculateTotal().toFixed(2) })}</strong>
                 </div>
 
                 <div className="form-group">
-                  <label>Payment Received *</label>
+                  <label>{t('pos_payment_received')}</label>
                   <input
                     type="number"
                     step="0.01"
@@ -559,7 +566,7 @@ function POS() {
 
                 {paymentReceived && (
                   <div style={{ fontSize: '18px', marginBottom: '15px', color: calculateChange() >= 0 ? '#27ae60' : '#e74c3c' }}>
-                    <strong>Change:</strong> ${calculateChange().toFixed(2)}
+                    <strong>{t('pos_change', { amount: calculateChange().toFixed(2) })}</strong>
                   </div>
                 )}
 
@@ -569,20 +576,20 @@ function POS() {
                   className="button button-success"
                   style={{ width: '100%', padding: '15px', fontSize: '16px' }}
                 >
-                  {loading ? 'Processing...' : 'Complete Sale'}
+                  {loading ? t('pos_processing') : t('pos_complete_sale')}
                 </button>
                 {/* Refund Section (minimal) */}
                 {canManageRefunds && (
                 <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px dashed #ddd' }}>
-                  <h4 style={{ marginBottom: '8px' }}>Refund Transaction (minimal)</h4>
+                  <h4 style={{ marginBottom: '8px' }}>{t('pos_refund_section')}</h4>
                   <div className="form-group">
-                    <label>Invoice / Transaction Number</label>
+                    <label>{t('pos_invoice_number')}</label>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <input
                         type="text"
                         value={refundTxId}
                         onChange={(e) => handleRefundTxInputChange(e.target.value)}
-                        placeholder="Enter invoice no. or transaction ID"
+                        placeholder={t('pos_invoice_number')}
                         style={{ flex: 1 }}
                       />
                       <button
@@ -591,7 +598,7 @@ function POS() {
                         disabled={refundLookupLoading}
                         style={{ whiteSpace: 'nowrap' }}
                       >
-                        {refundLookupLoading ? 'Verifying...' : 'Verify'}
+                        {refundLookupLoading ? t('pos_verifying') : t('pos_verify_button')}
                       </button>
                     </div>
                   </div>
@@ -607,11 +614,11 @@ function POS() {
                           <div>
                             <div style={{ fontWeight: 'bold' }}>{tx.transaction_number}</div>
                             <div style={{ fontSize: 12, color: '#7f8c8d' }}>
-                              {tx.customer_name || 'Walk-in'} | ${Number(tx.total || 0).toFixed(2)} | {new Date(tx.transaction_date).toLocaleString()}
+                              {tx.customer_name || t('pos_walk_in')} | ${Number(tx.total || 0).toFixed(2)} | {new Date(tx.transaction_date).toLocaleString()}
                             </div>
                           </div>
                           <button className="button" onClick={() => selectRefundTransaction(tx)} style={{ whiteSpace: 'nowrap' }}>
-                            Select
+                            {t('pos_select')}
                           </button>
                         </div>
                       ))}
@@ -619,22 +626,28 @@ function POS() {
                   )}
                   {verifiedRefundTx && (
                     <div style={{ marginBottom: 10, padding: 10, border: '1px solid #27ae60', borderRadius: 6, backgroundColor: '#ecf9f0' }}>
-                      <div><strong>Verified:</strong> {verifiedRefundTx.transaction_number}</div>
-                      <div>Total: ${Number(verifiedRefundTx.total || 0).toFixed(2)}</div>
-                      <div>Date: {new Date(verifiedRefundTx.transaction_date).toLocaleString()}</div>
+                      <div>
+                        <strong>
+                          {t('pos_verified', {
+                            transaction: verifiedRefundTx.transaction_number,
+                            total: Number(verifiedRefundTx.total || 0).toFixed(2)
+                          })}
+                        </strong>
+                      </div>
+                      <div>{new Date(verifiedRefundTx.transaction_date).toLocaleString()}</div>
                     </div>
                   )}
                   <div className="form-group">
-                    <label>Amount</label>
+                    <label>{t('pos_refund_amount')}</label>
                     <input type="number" step="0.01" value={refundAmount} onChange={(e) => setRefundAmount(e.target.value)} placeholder="0.00" />
                   </div>
                   <div className="form-group">
-                    <label>Reason (optional)</label>
-                    <input type="text" value={refundReason} onChange={(e) => setRefundReason(e.target.value)} placeholder="Refund reason" />
+                    <label>{t('pos_refund_reason')}</label>
+                    <input type="text" value={refundReason} onChange={(e) => setRefundReason(e.target.value)} placeholder={t('pos_refund_reason_placeholder')} />
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                     <input id="restock" type="checkbox" checked={refundRestock} onChange={(e) => setRefundRestock(e.target.checked)} />
-                    <label htmlFor="restock">Restock items</label>
+                    <label htmlFor="restock">{t('pos_restock_items')}</label>
                   </div>
                   <button
                     onClick={() => handleRefund(false)}
@@ -642,14 +655,14 @@ function POS() {
                     className="button button-warning"
                     style={{ width: '100%', marginTop: 8, backgroundColor: '#e67e22', color: 'white' }}
                   >
-                    {refundLoading ? 'Processing...' : 'Process Refund'}
+                    {refundLoading ? t('pos_processing') : t('pos_process_refund')}
                   </button>
                 </div>
                 )}
                 <button
                   onClick={async () => {
                     if (!selectedUserId) {
-                      alert('Please select a sales user to close cashier for.');
+                      alert(t('pos_select_user_closure'));
                       return;
                     }
                     // request closure summary from backend
@@ -708,9 +721,9 @@ function POS() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ fontSize: '60px', marginBottom: '20px' }}>✅</div>
-            <h2 style={{ marginTop: 0, color: '#27ae60' }}>Sale Completed Successfully!</h2>
+            <h2 style={{ marginTop: 0, color: '#27ae60' }}>{t('pos_success_modal_title')}</h2>
             <p style={{ color: '#7f8c8d', fontSize: '18px', marginBottom: '30px' }}>
-              Transaction has been recorded
+              {t('pos_success_modal_subtitle')}
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <button
@@ -719,14 +732,14 @@ function POS() {
                   try {
                     // Check if browser supports Web Serial API
                     if (!('serial' in navigator)) {
-                      alert('⚠️ Web Serial API not supported in this browser.\n\nPlease use Chrome, Edge, or Opera browser for direct printing.');
+                      alert(t('pos_no_serial_api'));
                       return;
                     }
 
                     const response = await fetch(`http://localhost:8005/api/pos/transactions/${lastTransactionId}/receipt/escpos`);
                     
                     if (response.status === 503) {
-                      alert('ESC/POS library not available on server.\n\nThermal printing requires the python-escpos library.');
+                      alert(t('pos_escpos_not_available'));
                       return;
                     }
                     
@@ -750,30 +763,30 @@ function POS() {
                     // Close the port
                     await port.close();
                     
-                    alert('✅ Receipt printed successfully!');
+                    alert(t('pos_print_success'));
                     setShowSuccessModal(false);
                   } catch (error: any) {
                     console.error('Error printing receipt:', error);
                     
                     if (error.name === 'NotFoundError') {
-                      alert('❌ No printer selected.\n\nPlease select your thermal printer when prompted.');
+                      alert(t('pos_no_printer_selected'));
                     } else if (error.name === 'NetworkError') {
-                      alert('❌ Could not connect to printer.\n\nMake sure the printer is turned on and connected.');
+                      alert(t('pos_printer_not_connected'));
                     } else {
-                      alert('❌ Failed to print receipt.\n\nError: ' + error.message);
+                      alert(t('pos_print_failed', { error: error.message }));
                     }
                   }
                 }}
                 style={{ padding: '15px 24px', fontSize: '16px', width: '100%' }}
               >
-                🖨️ Print Receipt (Thermal Printer)
+                {t('pos_print_receipt')}
               </button>
               <button
                 className="button"
                 onClick={() => setShowSuccessModal(false)}
                 style={{ padding: '15px 24px', fontSize: '16px', backgroundColor: '#95a5a6', color: 'white', width: '100%' }}
               >
-                Close
+                {t('pos_close')}
               </button>
             </div>
           </div>
@@ -807,15 +820,15 @@ function POS() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 style={{ marginTop: 0 }}>Process Refund</h2>
+            <h2 style={{ marginTop: 0 }}>{t('pos_process_refund')}</h2>
             <div className="form-group">
-              <label>Invoice / Transaction Number</label>
+              <label>{t('pos_invoice_number')}</label>
               <div style={{ display: 'flex', gap: 8 }}>
                 <input
                   type="text"
                   value={refundTxId}
                   onChange={(e) => handleRefundTxInputChange(e.target.value)}
-                  placeholder="Enter invoice no. or transaction ID"
+                  placeholder={t('pos_invoice_number')}
                   style={{ flex: 1 }}
                 />
                 <button
@@ -824,7 +837,7 @@ function POS() {
                   disabled={refundLookupLoading}
                   style={{ whiteSpace: 'nowrap' }}
                 >
-                  {refundLookupLoading ? 'Verifying...' : 'Verify'}
+                  {refundLookupLoading ? t('pos_verifying') : t('pos_verify_button')}
                 </button>
               </div>
             </div>
@@ -840,11 +853,11 @@ function POS() {
                     <div>
                       <div style={{ fontWeight: 'bold' }}>{tx.transaction_number}</div>
                       <div style={{ fontSize: 12, color: '#7f8c8d' }}>
-                        {tx.customer_name || 'Walk-in'} | ${Number(tx.total || 0).toFixed(2)} | {new Date(tx.transaction_date).toLocaleString()}
+                        {tx.customer_name || t('pos_walk_in')} | ${Number(tx.total || 0).toFixed(2)} | {new Date(tx.transaction_date).toLocaleString()}
                       </div>
                     </div>
                     <button className="button" onClick={() => selectRefundTransaction(tx)} style={{ whiteSpace: 'nowrap' }}>
-                      Select
+                      {t('pos_select')}
                     </button>
                   </div>
                 ))}
@@ -852,22 +865,28 @@ function POS() {
             )}
             {verifiedRefundTx && (
               <div style={{ marginBottom: 10, padding: 10, border: '1px solid #27ae60', borderRadius: 6, backgroundColor: '#ecf9f0' }}>
-                <div><strong>Verified:</strong> {verifiedRefundTx.transaction_number}</div>
-                <div>Total: ${Number(verifiedRefundTx.total || 0).toFixed(2)}</div>
-                <div>Date: {new Date(verifiedRefundTx.transaction_date).toLocaleString()}</div>
+                <div>
+                  <strong>
+                    {t('pos_verified', {
+                      transaction: verifiedRefundTx.transaction_number,
+                      total: Number(verifiedRefundTx.total || 0).toFixed(2)
+                    })}
+                  </strong>
+                </div>
+                <div>{new Date(verifiedRefundTx.transaction_date).toLocaleString()}</div>
               </div>
             )}
             <div className="form-group">
-              <label>Amount</label>
+              <label>{t('pos_refund_amount')}</label>
               <input type="number" step="0.01" value={refundAmount} onChange={(e) => setRefundAmount(e.target.value)} placeholder="0.00" />
             </div>
             <div className="form-group">
-              <label>Reason (optional)</label>
-              <input type="text" value={refundReason} onChange={(e) => setRefundReason(e.target.value)} placeholder="Refund reason" />
+              <label>{t('pos_refund_reason')}</label>
+              <input type="text" value={refundReason} onChange={(e) => setRefundReason(e.target.value)} placeholder={t('pos_refund_reason_placeholder')} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <input id="restock_modal" type="checkbox" checked={refundRestock} onChange={(e) => setRefundRestock(e.target.checked)} />
-              <label htmlFor="restock_modal">Restock items</label>
+              <label htmlFor="restock_modal">{t('pos_restock_items')}</label>
             </div>
 
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
@@ -877,7 +896,7 @@ function POS() {
                 className="button button-warning"
                 style={{ padding: '10px 14px', backgroundColor: '#e67e22', color: 'white', borderRadius: 6, flex: 1 }}
               >
-                {refundLoading ? 'Processing...' : 'Process Refund'}
+                {refundLoading ? t('pos_processing') : t('pos_process_refund')}
               </button>
 
               <button
@@ -885,7 +904,7 @@ function POS() {
                 onClick={() => setShowRefundModal(false)}
                 style={{ padding: '10px 14px', borderRadius: 6 }}
               >
-                Cancel
+                {t('cancel')}
               </button>
             </div>
           </div>
@@ -919,21 +938,21 @@ function POS() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 style={{ marginTop: 0 }}>Cashier Closure Summary</h2>
-            <p style={{ color: '#7f8c8d' }}>User ID: {selectedUserId}</p>
+            <h2 style={{ marginTop: 0 }}>{t('pos_closure_summary')}</h2>
+            <p style={{ color: '#7f8c8d' }}>{t('users_current_user')}: {selectedUserId}</p>
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: 12 }}>
               <div style={{ flex: '1 1 40%', padding: 12, background: '#f8f9fa', borderRadius: 6 }}>
-                <div style={{ fontSize: 12, color: '#7f8c8d' }}>Transactions</div>
+                <div style={{ fontSize: 12, color: '#7f8c8d' }}>{t('pos_closure_transactions')}</div>
                 <div style={{ fontSize: 20, fontWeight: 'bold' }}>{closureSummary.transaction_count}</div>
               </div>
               <div style={{ flex: '1 1 55%', padding: 12, background: '#f8f9fa', borderRadius: 6 }}>
-                <div style={{ fontSize: 12, color: '#7f8c8d' }}>Total Sales</div>
+                <div style={{ fontSize: 12, color: '#7f8c8d' }}>{t('pos_closure_total_sales')}</div>
                 <div style={{ fontSize: 20, fontWeight: 'bold' }}>${closureSummary.total_sales.toFixed(2)}</div>
               </div>
             </div>
 
             <div style={{ marginTop: 12 }}>
-              <h4 style={{ margin: '8px 0' }}>By Payment Method</h4>
+              <h4 style={{ margin: '8px 0' }}>{t('pos_closure_by_payment')}</h4>
               <ul>
                 {Object.entries(closureSummary.by_payment_method || closureSummary.by_method || {}).map(([m, amt]: any) => (
                   <li key={m} style={{ color: '#333' }}>{m}: ${amt.toFixed(2)}</li>
@@ -948,12 +967,12 @@ function POS() {
                   try {
                     setSavingClosure(true);
                     const res = await posAPI.createClosure({ sales_user_id: selectedUserId, start_date: closureSummary.start, end_date: closureSummary.end, save_to_ledger: true });
-                    alert('Closure saved to ledger.');
+                    alert(t('pos_closure_saved'));
                     setClosureSummary(res.data || res);
                     setShowClosureModal(false);
                   } catch (err: any) {
                     console.error('Failed to save closure:', err);
-                    alert(err.response?.data?.detail || 'Failed to save closure');
+                    alert(err.response?.data?.detail || t('pos_save_closure_failed'));
                   } finally {
                     setSavingClosure(false);
                   }
@@ -961,7 +980,7 @@ function POS() {
                 disabled={savingClosure}
                 style={{ flex: 1, padding: '12px' }}
               >
-                {savingClosure ? 'Saving...' : 'Save Closure'}
+                {savingClosure ? t('pos_saving_closure') : t('pos_save_closure')}
               </button>
 
               <button
@@ -978,7 +997,7 @@ function POS() {
                 }}
                 style={{ flex: 1, padding: '12px', backgroundColor: '#95a5a6', color: 'white' }}
               >
-                Print Summary
+                {t('pos_print_summary')}
               </button>
 
               <button
@@ -986,7 +1005,7 @@ function POS() {
                 onClick={() => setShowClosureModal(false)}
                 style={{ padding: '12px' }}
               >
-                Close
+                {t('pos_close')}
               </button>
             </div>
           </div>
