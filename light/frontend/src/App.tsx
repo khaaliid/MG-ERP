@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -17,6 +17,102 @@ import './App.css';
 import { useTranslation } from 'react-i18next';
 import './i18n';
 import LanguageSelector from './components/LanguageSelector';
+import { APP_CONFIG } from './config';
+
+type RemoteAd = {
+  title: string;
+  description: string;
+  url: string;
+};
+
+const normalizeAdResponse = (payload: any): RemoteAd => {
+  const adSource = Array.isArray(payload?.ads)
+    ? payload.ads[0]
+    : Array.isArray(payload?.posts)
+      ? payload.posts[0]
+      : payload;
+
+  return {
+    title: adSource?.title || adSource?.name || 'Sponsored',
+    description: adSource?.description || adSource?.body || 'Check out our latest offer.',
+    url: adSource?.url || adSource?.link || '#'
+  };
+};
+
+const AdSlot = () => {
+  const [remoteAd, setRemoteAd] = useState<RemoteAd | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const adsApiUrl = APP_CONFIG.ads.publicAdsApiUrl;
+
+    const loadAd = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const response = await fetch(adsApiUrl, {
+          method: 'GET',
+          signal: controller.signal
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch ad: ${response.status}`);
+        }
+
+        const payload = await response.json();
+        setRemoteAd(normalizeAdResponse(payload));
+      } catch (fetchError: any) {
+        if (fetchError?.name !== 'AbortError') {
+          setError('Unable to load external ad right now.');
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadAd();
+
+    return () => {
+      controller.abort();
+    };
+  }, []);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0', alignSelf: 'stretch' }}>
+      <div
+        id="light-adsense-ad-slot"
+        className="common-ad-slot common-ad-slot-adsense"
+        data-ad-slot="light-global-adsense"
+        data-ad-provider="adsense"
+        style={{ flex: 1, overflow: 'hidden' }}
+      />
+      <div
+        id="light-backend-ad-slot"
+        className="common-ad-slot common-ad-slot-backend"
+        data-ad-slot="light-global-backend"
+        data-ad-provider="backend-api"
+        style={{ flex: 1, overflow: 'hidden' }}
+      >
+        {isLoading && <p>Loading ad...</p>}
+        {!isLoading && error && <p>{error}</p>}
+        {!isLoading && !error && remoteAd && (
+          <>
+            <h4 style={{ marginTop: 0 }}>{remoteAd.title}</h4>
+            <p>{remoteAd.description}</p>
+            {remoteAd.url !== '#' && (
+              <a href={remoteAd.url} target="_blank" rel="noopener noreferrer">
+                Learn more
+              </a>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
 
 function MainApp() {
   const [activeMenu, setActiveMenu] = useState('pos');
@@ -131,65 +227,68 @@ function MainApp() {
         </ul>
       </nav>
 
-      <main className="main-content">
-        <Routes>
-          <Route path="/" element={
-            <ProtectedRoute>
-              <POS />
-            </ProtectedRoute>
-          } />
-          <Route path="/dashboard" element={
-            <ProtectedRoute requiredRole="manager">
-              <Dashboard />
-            </ProtectedRoute>
-          } />
-          <Route path="/inventory" element={
-            <ProtectedRoute requiredRole="manager">
-              <Inventory />
-            </ProtectedRoute>
-          } />
-          <Route path="/pos" element={
-            <ProtectedRoute>
-              <POS />
-            </ProtectedRoute>
-          } />
-          <Route path="/transactions-history" element={
-            <ProtectedRoute>
-              <TransactionsHistory />
-            </ProtectedRoute>
-          } />
-          <Route path="/ledger" element={
-            <ProtectedRoute requiredRole="manager">
-              <Ledger />
-            </ProtectedRoute>
-          } />
-          <Route path="/expenses" element={
-            <ProtectedRoute requiredRole="manager">
-              <Expenses />
-            </ProtectedRoute>
-          } />
-          <Route path="/auth-users" element={
-            <ProtectedRoute requiredRole="super_admin">
-              <Users />
-            </ProtectedRoute>
-          } />
-          <Route path="/sales-users" element={
-            <ProtectedRoute requiredRole="manager">
-              <SalesUsers />
-            </ProtectedRoute>
-          } />
-          <Route path="/reports" element={
-            <ProtectedRoute requiredRole="manager">
-              <Reports />
-            </ProtectedRoute>
-          } />
-          <Route path="/sales-user-report" element={
-            <ProtectedRoute requiredRole="manager">
-              <SalesUserReport />
-            </ProtectedRoute>
-          } />
-        </Routes>
-      </main>
+      <div className="content-wrapper">
+        <main className="main-content">
+          <Routes>
+            <Route path="/" element={
+              <ProtectedRoute>
+                <POS />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard" element={
+              <ProtectedRoute requiredRole="manager">
+                <Dashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/inventory" element={
+              <ProtectedRoute requiredRole="manager">
+                <Inventory />
+              </ProtectedRoute>
+            } />
+            <Route path="/pos" element={
+              <ProtectedRoute>
+                <POS />
+              </ProtectedRoute>
+            } />
+            <Route path="/transactions-history" element={
+              <ProtectedRoute>
+                <TransactionsHistory />
+              </ProtectedRoute>
+            } />
+            <Route path="/ledger" element={
+              <ProtectedRoute requiredRole="manager">
+                <Ledger />
+              </ProtectedRoute>
+            } />
+            <Route path="/expenses" element={
+              <ProtectedRoute requiredRole="manager">
+                <Expenses />
+              </ProtectedRoute>
+            } />
+            <Route path="/auth-users" element={
+              <ProtectedRoute requiredRole="super_admin">
+                <Users />
+              </ProtectedRoute>
+            } />
+            <Route path="/sales-users" element={
+              <ProtectedRoute requiredRole="manager">
+                <SalesUsers />
+              </ProtectedRoute>
+            } />
+            <Route path="/reports" element={
+              <ProtectedRoute requiredRole="manager">
+                <Reports />
+              </ProtectedRoute>
+            } />
+            <Route path="/sales-user-report" element={
+              <ProtectedRoute requiredRole="manager">
+                <SalesUserReport />
+              </ProtectedRoute>
+            } />
+          </Routes>
+        </main>
+        <AdSlot />
+      </div>
     </div>
   );
 }
@@ -199,7 +298,16 @@ function App() {
     <Router>
       <AuthProvider>
         <Routes>
-          <Route path="/login" element={<Login />} />
+          <Route path="/login" element={
+            <div className="app">
+              <div className="content-wrapper">
+                <main className="main-content">
+                  <Login />
+                </main>
+                <AdSlot />
+              </div>
+            </div>
+          } />
           <Route path="/*" element={<MainApp />} />
         </Routes>
       </AuthProvider>

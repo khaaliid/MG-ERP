@@ -13,6 +13,16 @@
   min-height: 100vh;
 }
 
+.app:has(.sidebar) {
+  /* App with sidebar (authenticated pages) */
+}
+
+.app:not(:has(.sidebar)) .content-wrapper {
+  /* Login page without sidebar - full width */
+  margin-left: 0;
+  width: 100%;
+}
+
 .sidebar {
   width: 250px;
   background-color: #2c3e50;
@@ -58,10 +68,17 @@
   padding-left: 16px;
 }
 
-.main-content {
+.content-wrapper {
   margin-left: 250px;
-  padding: 30px;
+  display: flex;
   flex: 1;
+  background-color: #f5f5f5;
+}
+
+.main-content {
+  flex: 1;
+  padding: 30px;
+  overflow-y: auto;
   background-color: #f5f5f5;
 }
 
@@ -218,4 +235,16 @@
   padding: 15px;
   border-radius: 5px;
   margin-bottom: 20px;
+}
+
+.common-ad-slot {
+  width: 300px;
+  min-height: 0;
+  border-left: 1px solid #bdc3c7;
+  border-radius: 0;
+  background: #ffffff;
+  padding: 20px;
+  overflow-y: auto;
+  box-shadow: -2px 0 4px rgba(0, 0, 0, 0.05);
+  flex-shrink: 0;
 }
