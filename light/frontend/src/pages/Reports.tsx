@@ -33,6 +33,32 @@ type BalanceSheetReport = {
   is_balanced: boolean;
 };
 
+type CashierClosureDetail = {
+  sales_user_id: number;
+  sales_user_name: string;
+  start_date: string;
+  end_date: string;
+  total_sales: number;
+  transaction_count: number;
+  by_payment_method: { [key: string]: number };
+  reconciliation_status: 'reconciled' | 'variance' | 'unreconciled';
+  expected_amount: number;
+  actual_amount: number;
+  variance: number;
+};
+
+type CashierClosureSummaryReport = {
+  report_date: string;
+  period_start: string;
+  period_end: string;
+  closures: CashierClosureDetail[];
+  total_closures: number;
+  total_revenue: number;
+  total_transactions: number;
+  total_variance: number;
+  reconciliation_status: 'all_reconciled' | 'partial_variance' | 'unreconciled';
+};
+
 const REPORT_GROUPS: ReportGroup[] = [
   {
     title: 'Core Financial Statements (Legal Requirement)',
@@ -74,7 +100,7 @@ const REPORT_GROUPS: ReportGroup[] = [
         key: 'cashier_closure_summary',
         name: 'Cashier Closure Summary',
         description: 'Cashier session closure totals, variances, and reconciliation status.',
-        status: 'coming_soon',
+        status: 'ready',
       },
     ],
   },
@@ -116,6 +142,7 @@ function Reports() {
   const [reportActionError, setReportActionError] = useState('');
   const [activeReportKey, setActiveReportKey] = useState<string | null>(null);
   const [balanceSheetReport, setBalanceSheetReport] = useState<BalanceSheetReport | null>(null);
+  const [cashierClosureReport, setCashierClosureReport] = useState<CashierClosureSummaryReport | null>(null);
   const { i18n } = useTranslation();
   console.log("Current detected language:", i18n.language);
 
@@ -174,6 +201,28 @@ function Reports() {
       } catch (err: any) {
         setBalanceSheetReport(null);
         setReportActionError(err.response?.data?.detail || 'Failed to load balance sheet report');
+      } finally {
+        setReportActionLoading(false);
+      }
+      return;
+    }
+
+    if (report.key === 'cashier_closure_summary') {
+      try {
+        setReportActionLoading(true);
+        const days = parseInt(dateRange);
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - days);
+        
+        const response = await reportsAPI.getCashierClosureSummaryReport({
+          start_date: startDate.toISOString(),
+          end_date: endDate.toISOString(),
+        });
+        setCashierClosureReport(response.data);
+      } catch (err: any) {
+        setCashierClosureReport(null);
+        setReportActionError(err.response?.data?.detail || 'Failed to load cashier closure report');
       } finally {
         setReportActionLoading(false);
       }
@@ -324,7 +373,7 @@ function Reports() {
         </div>
       </div>
 
-      {(reportActionLoading || reportActionError || balanceSheetReport) && (
+      {(reportActionLoading || reportActionError || balanceSheetReport || cashierClosureReport) && (
         <div className="card" style={{ marginTop: 18 }}>
           <h3>🧮 Report Viewer</h3>
           {reportActionLoading && <p className="report-viewer-note">Loading selected report...</p>}
@@ -401,6 +450,119 @@ function Reports() {
                   ? 'Balance sheet is balanced.'
                   : 'Balance sheet is not balanced. Review source transactions and mappings.'}
               </p>
+            </div>
+          )}
+
+          {!reportActionLoading && !reportActionError && activeReportKey === 'cashier_closure_summary' && cashierClosureReport && (
+            <div className="cashier-closure-wrap">
+              <div className="cashier-closure-meta">
+                <strong>Report Date:</strong> {new Date(cashierClosureReport.report_date).toLocaleString()} | 
+                <strong style={{ marginLeft: 16 }}>Period:</strong> {new Date(cashierClosureReport.period_start).toLocaleDateString()} to {new Date(cashierClosureReport.period_end).toLocaleDateString()}
+              </div>
+
+              <div className="cashier-closure-summary" style={{ marginBottom: 20, padding: 12, backgroundColor: '#f5f5f5', borderRadius: 6 }}>
+                <h4 style={{ marginTop: 0 }}>Summary</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+                  <div>
+                    <strong>Total Closures:</strong>
+                    <div style={{ fontSize: '1.5em', color: '#2c3e50', marginTop: 4 }}>{cashierClosureReport.total_closures}</div>
+                  </div>
+                  <div>
+                    <strong>Total Revenue:</strong>
+                    <div style={{ fontSize: '1.5em', color: '#27ae60', marginTop: 4 }}>{formatCurrency(cashierClosureReport.total_revenue)}</div>
+                  </div>
+                  <div>
+                    <strong>Total Transactions:</strong>
+                    <div style={{ fontSize: '1.5em', color: '#2c3e50', marginTop: 4 }}>{cashierClosureReport.total_transactions}</div>
+                  </div>
+                  <div>
+                    <strong>Total Variance:</strong>
+                    <div style={{ fontSize: '1.5em', color: cashierClosureReport.total_variance > 0 ? '#e74c3c' : '#27ae60', marginTop: 4 }}>{formatCurrency(cashierClosureReport.total_variance)}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="cashier-closure-status" style={{ marginBottom: 20 }}>
+                <p className={`report-status-label`}>
+                  <strong>Reconciliation Status:</strong> <span style={{
+                    padding: '4px 8px',
+                    borderRadius: 4,
+                    backgroundColor: cashierClosureReport.reconciliation_status === 'all_reconciled' ? '#d4edda' : 
+                                     cashierClosureReport.reconciliation_status === 'partial_variance' ? '#fff3cd' : '#f8d7da',
+                    color: cashierClosureReport.reconciliation_status === 'all_reconciled' ? '#155724' : 
+                           cashierClosureReport.reconciliation_status === 'partial_variance' ? '#856404' : '#721c24'
+                  }}>
+                    {cashierClosureReport.reconciliation_status === 'all_reconciled' ? 'All Reconciled ✓' : 
+                     cashierClosureReport.reconciliation_status === 'partial_variance' ? 'Partial Variance ⚠' : 
+                     'Unreconciled ✗'}
+                  </span>
+                </p>
+              </div>
+
+              <h4>Cashier Closures</h4>
+              <div style={{ overflowX: 'auto' }}>
+                <table className="table" style={{ width: '100%' }}>
+                  <thead>
+                    <tr>
+                      <th>Cashier Name</th>
+                      <th>Period</th>
+                      <th>Transactions</th>
+                      <th>Total Sales</th>
+                      <th>Expected</th>
+                      <th>Actual</th>
+                      <th>Variance</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cashierClosureReport.closures.map((closure) => (
+                      <tr key={closure.sales_user_id}>
+                        <td><strong>{closure.sales_user_name}</strong></td>
+                        <td>{new Date(closure.start_date).toLocaleDateString()} - {new Date(closure.end_date).toLocaleDateString()}</td>
+                        <td>{closure.transaction_count}</td>
+                        <td>{formatCurrency(closure.total_sales)}</td>
+                        <td>{formatCurrency(closure.expected_amount)}</td>
+                        <td>{formatCurrency(closure.actual_amount)}</td>
+                        <td style={{ color: closure.variance > 0 ? '#e74c3c' : '#27ae60' }}>{formatCurrency(closure.variance)}</td>
+                        <td>
+                          <span style={{
+                            padding: '2px 6px',
+                            borderRadius: 3,
+                            fontSize: '0.85em',
+                            backgroundColor: closure.reconciliation_status === 'reconciled' ? '#d4edda' : 
+                                           closure.reconciliation_status === 'variance' ? '#fff3cd' : '#f8d7da',
+                            color: closure.reconciliation_status === 'reconciled' ? '#155724' : 
+                                 closure.reconciliation_status === 'variance' ? '#856404' : '#721c24'
+                          }}>
+                            {closure.reconciliation_status === 'reconciled' ? 'Reconciled' : 
+                             closure.reconciliation_status === 'variance' ? 'Variance' : 
+                             'Unreconciled'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div style={{ marginTop: 16 }}>
+                <h4>Payment Methods Breakdown</h4>
+                {cashierClosureReport.closures.map((closure) => (
+                  closure.by_payment_method && Object.keys(closure.by_payment_method).length > 0 && (
+                    <div key={`breakdown-${closure.sales_user_id}`} style={{ marginBottom: 12, padding: 10, backgroundColor: '#fafafa', borderRadius: 4 }}>
+                      <strong>{closure.sales_user_name}</strong>
+                      <div style={{ marginTop: 6, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+                        {Object.entries(closure.by_payment_method).map(([method, amount]) => (
+                          <div key={`${closure.sales_user_id}-${method}`}>
+                            <div style={{ fontSize: '0.9em', color: '#7f8c8d' }}>{method}</div>
+                            <div style={{ fontSize: '1.1em', fontWeight: 'bold', color: '#2c3e50' }}>{formatCurrency(amount as number)}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                ))}
+              </div>
             </div>
           )}
         </div>

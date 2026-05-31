@@ -284,6 +284,22 @@ class LedgerReportResponse(BaseModel):
     transaction_count: int
 
 
+class BalanceSheetLineItem(BaseModel):
+    name: str
+    amount: float
+
+
+class BalanceSheetResponse(BaseModel):
+    as_of_date: datetime
+    assets: List[BalanceSheetLineItem]
+    liabilities: List[BalanceSheetLineItem]
+    equity: List[BalanceSheetLineItem]
+    total_assets: float
+    total_liabilities: float
+    total_equity: float
+    is_balanced: bool
+
+
 # Sales User Performance Report Schemas
 class ProductBreakdown(BaseModel):
     product_name: str
@@ -309,6 +325,33 @@ class SalesUserPerformanceReportResponse(BaseModel):
     total_transactions: int
     total_pieces: int
     total_revenue: float
+
+
+# Cashier Closure Summary Report Schemas
+class CashierClosureDetail(BaseModel):
+    sales_user_id: int
+    sales_user_name: str
+    start_date: datetime
+    end_date: datetime
+    total_sales: float
+    transaction_count: int
+    by_payment_method: dict
+    reconciliation_status: str  # 'reconciled', 'pending', 'variance'
+    expected_amount: float
+    actual_amount: float
+    variance: float
+
+
+class CashierClosureSummaryReport(BaseModel):
+    report_date: datetime
+    period_start: datetime
+    period_end: datetime
+    closures: List[CashierClosureDetail]
+    total_closures: int
+    total_revenue: float
+    total_transactions: int
+    total_variance: float
+    reconciliation_status: str  # 'all_reconciled', 'partial_variance', 'unreconciled'
 
 
 # Expense Schemas

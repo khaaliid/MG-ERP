@@ -33,11 +33,11 @@ from schemas import (
     LedgerRecordCreate, LedgerRecordResponse, LedgerPageResponse,
     InventoryItemCreate, InventoryItemUpdate, InventoryItemResponse,
     POSTransactionCreate, POSTransactionResponse, POSTransactionPageResponse,
-    SalesReportResponse, InventoryReportResponse, LedgerReportResponse,
+    SalesReportResponse, InventoryReportResponse, LedgerReportResponse, BalanceSheetResponse,
     Token, UserLogin, UserCreate, UserUpdate, UserResponse,
     ExpenseCreate, ExpenseUpdate, ExpenseResponse, ExpensePageResponse,
     SalesUserCreate, SalesUserUpdate, SalesUserResponse,
-    SalesUserPerformanceReportResponse
+    SalesUserPerformanceReportResponse, CashierClosureSummaryReport
 )
 from schemas import POSClosureRequest, POSClosureResponse
 from schemas import RefundRequest, RefundResponse
@@ -1246,6 +1246,67 @@ def get_ledger_report(
     )
 
 
+@router.get("/reports/balance-sheet", response_model=BalanceSheetResponse)
+def get_balance_sheet_report(
+    as_of_date: Optional[datetime] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_manager)
+):
+    """Get a balance sheet snapshot as of a specific date."""
+    if not as_of_date:
+        as_of_date = datetime.utcnow()
+
+    latest_balance_record = (
+        db.query(LedgerRecord)
+        .filter(LedgerRecord.transaction_date <= as_of_date)
+        .order_by(LedgerRecord.transaction_date.desc(), LedgerRecord.id.desc())
+        .first()
+    )
+    cash_and_bank = latest_balance_record.balance if latest_balance_record else 0.0
+
+    inventory_asset_value = db.query(
+        func.coalesce(func.sum(InventoryItem.quantity * InventoryItem.cost_price), 0.0)
+    ).scalar() or 0.0
+
+    historical_records = db.query(LedgerRecord).filter(LedgerRecord.transaction_date <= as_of_date).all()
+    retained_earnings = 0.0
+    for record in historical_records:
+        if record.transaction_type == TransactionType.SALE:
+            retained_earnings += record.amount
+        else:
+            retained_earnings -= record.amount
+
+    assets = [
+        {"name": "Cash and Bank", "amount": float(cash_and_bank)},
+        {"name": "Inventory", "amount": float(inventory_asset_value)},
+    ]
+
+    liabilities = [
+        {"name": "Accounts Payable", "amount": 0.0},
+    ]
+
+    total_assets = sum(line["amount"] for line in assets)
+    total_liabilities = sum(line["amount"] for line in liabilities)
+
+    balancing_equity = total_assets - total_liabilities - retained_earnings
+    equity = [
+        {"name": "Retained Earnings", "amount": float(retained_earnings)},
+        {"name": "Opening/Adjustment Equity", "amount": float(balancing_equity)},
+    ]
+    total_equity = sum(line["amount"] for line in equity)
+
+    return BalanceSheetResponse(
+        as_of_date=as_of_date,
+        assets=assets,
+        liabilities=liabilities,
+        equity=equity,
+        total_assets=total_assets,
+        total_liabilities=total_liabilities,
+        total_equity=total_equity,
+        is_balanced=abs(total_assets - (total_liabilities + total_equity)) < 0.01,
+    )
+
+
 @router.get("/reports/sales-users", response_model=SalesUserPerformanceReportResponse)
 def get_sales_user_performance_report(
     start_date: Optional[datetime] = Query(None),
@@ -1386,6 +1447,117 @@ def get_sales_user_performance_report(
         total_pieces=total_pieces_overall,
         total_revenue=total_revenue_overall
     )
+
+
+@router.get("/reports/cashier-closures", response_model=CashierClosureSummaryReport)
+def get_cashier_closure_summary_report(
+    start_date: Optional[datetime] = Query(None),
+    end_date: Optional[datetime] = Query(None),
+    sales_user_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_manager)
+):
+    """Get cashier closure summary report with reconciliation status"""
+    if not start_date:
+        start_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=7)
+    if not end_date:
+        end_date = datetime.utcnow().replace(hour=23, minute=59, second=59, microsecond=999999)
+    
+    # Get all sales users or filter by specific user
+    if sales_user_id:
+        sales_users = db.query(SalesUser).filter(SalesUser.id == sales_user_id).all()
+    else:
+        sales_users = db.query(SalesUser).all()
+    
+    closures = []
+    total_revenue = 0.0
+    total_transactions = 0
+    total_variance = 0.0
+    reconciled_count = 0
+    partial_variance_count = 0
+    unreconciled_count = 0
+    
+    # Process each sales user
+    for user in sales_users:
+        # Get transactions for this sales user in date range
+        transactions = db.query(POSTransaction).filter(
+            POSTransaction.sales_user_id == user.id,
+            POSTransaction.transaction_date >= start_date,
+            POSTransaction.transaction_date <= end_date
+        ).order_by(POSTransaction.transaction_date.desc()).all()
+        
+        if not transactions:
+            continue  # Skip users with no transactions
+        
+        # Calculate totals
+        total_sales = sum(t.total for t in transactions)
+        transaction_count = len(transactions)
+        
+        # Group by payment method
+        by_method = {}
+        for t in transactions:
+            method = (t.payment_method.value if hasattr(t.payment_method, 'value') else str(t.payment_method)) or 'cash'
+            amount = t.payment_received or t.total or 0.0
+            by_method[method] = by_method.get(method, 0.0) + amount
+        
+        # Calculate reconciliation: expected vs actual
+        expected_amount = total_sales
+        actual_amount = sum(by_method.values())
+        variance = abs(expected_amount - actual_amount)
+        
+        # Determine reconciliation status
+        if variance < 0.01:  # Allow small floating point differences
+            reconciliation_status = 'reconciled'
+            reconciled_count += 1
+        elif variance < (expected_amount * 0.05):  # Less than 5% variance
+            reconciliation_status = 'variance'
+            partial_variance_count += 1
+        else:
+            reconciliation_status = 'unreconciled'
+            unreconciled_count += 1
+        
+        closure_detail = {
+            'sales_user_id': user.id,
+            'sales_user_name': user.name,
+            'start_date': transactions[-1].transaction_date,  # First transaction
+            'end_date': transactions[0].transaction_date,     # Last transaction
+            'total_sales': total_sales,
+            'transaction_count': transaction_count,
+            'by_payment_method': by_method,
+            'reconciliation_status': reconciliation_status,
+            'expected_amount': expected_amount,
+            'actual_amount': actual_amount,
+            'variance': variance
+        }
+        
+        closures.append(closure_detail)
+        total_revenue += total_sales
+        total_transactions += transaction_count
+        total_variance += variance
+    
+    # Determine overall reconciliation status
+    if unreconciled_count > 0:
+        overall_status = 'unreconciled'
+    elif partial_variance_count > 0:
+        overall_status = 'partial_variance'
+    else:
+        overall_status = 'all_reconciled'
+    
+    # Sort by user name
+    closures.sort(key=lambda x: x['sales_user_name'])
+    
+    return CashierClosureSummaryReport(
+        report_date=datetime.utcnow(),
+        period_start=start_date,
+        period_end=end_date,
+        closures=closures,
+        total_closures=len(closures),
+        total_revenue=total_revenue,
+        total_transactions=total_transactions,
+        total_variance=total_variance,
+        reconciliation_status=overall_status
+    )
+
 
 
 # ============= Expense Routes =============

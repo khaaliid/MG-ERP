@@ -118,6 +118,10 @@ export const reportsAPI = {
     api.get('/reports/inventory'),
   getLedgerReport: (params?: { start_date?: string; end_date?: string }) => 
     api.get('/reports/ledger', { params }),
+  getBalanceSheetReport: (params?: { as_of_date?: string }) =>
+    api.get('/reports/balance-sheet', { params }),
+  getCashierClosureSummaryReport: (params?: { start_date?: string; end_date?: string; sales_user_id?: number }) =>
+    api.get('/reports/cashier-closures', { params }),
 };
 
 // Expense API
