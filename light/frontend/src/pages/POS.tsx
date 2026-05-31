@@ -29,6 +29,7 @@ function POS() {
   const { hasRole } = useAuth();
   const { t } = useTranslation();
   const canManageRefunds = hasRole('manager', 'super_admin');
+  const isSuperAdmin = hasRole('super_admin');
   const [items, setItems] = useState<any[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [salesUsers, setSalesUsers] = useState<SalesUser[]>([]);
@@ -44,6 +45,7 @@ function POS() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showClosureModal, setShowClosureModal] = useState(false);
   const [closureLoading, setClosureLoading] = useState(false);
+  const [closeAllLoading, setCloseAllLoading] = useState(false);
   const [closureSummary, setClosureSummary] = useState<any | null>(null);
   const [savingClosure, setSavingClosure] = useState(false);
   // Refund states
@@ -322,6 +324,53 @@ function POS() {
     }
   };
 
+  const closeCashierForAllUsers = async () => {
+    if (!isSuperAdmin) {
+      return;
+    }
+
+    if (salesUsers.length === 0) {
+      alert(t('pos_no_sales_users'));
+      return;
+    }
+
+    if (!confirm(t('pos_close_all_confirm', { count: salesUsers.length }))) {
+      return;
+    }
+
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date();
+
+    try {
+      setCloseAllLoading(true);
+      const results = await Promise.allSettled(
+        salesUsers.map((user) =>
+          posAPI.createClosure({
+            sales_user_id: user.id,
+            start_date: start.toISOString(),
+            end_date: end.toISOString(),
+            save_to_ledger: true,
+          })
+        )
+      );
+
+      const successCount = results.filter((r) => r.status === 'fulfilled').length;
+      const failedCount = results.length - successCount;
+
+      if (failedCount === 0) {
+        alert(t('pos_close_all_success', { count: successCount }));
+      } else {
+        alert(t('pos_close_all_partial', { success: successCount, failed: failedCount }));
+      }
+    } catch (err: any) {
+      console.error('Failed to close cashier for all users:', err);
+      alert(err.response?.data?.detail || t('pos_close_all_failed'));
+    } finally {
+      setCloseAllLoading(false);
+    }
+  };
+
   return (
     <div>
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
@@ -356,6 +405,17 @@ function POS() {
           >
             {closureLoading ? t('pos_prepare_closure') : t('pos_close_cashier')}
           </button>
+
+          {isSuperAdmin && (
+            <button
+              onClick={closeCashierForAllUsers}
+              disabled={closeAllLoading}
+              className="button"
+              style={{ padding: '10px 14px', backgroundColor: '#8e44ad', color: 'white', borderRadius: 6 }}
+            >
+              {closeAllLoading ? t('pos_closing_all') : t('pos_close_cashier_all')}
+            </button>
+          )}
 
           {canManageRefunds && (
             <button
