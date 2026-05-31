@@ -13,10 +13,6 @@
   min-height: 100vh;
 }
 
-.app:has(.sidebar) {
-  /* App with sidebar (authenticated pages) */
-}
-
 .app:not(:has(.sidebar)) .content-wrapper {
   /* Login page without sidebar - full width */
   margin-left: 0;
@@ -328,9 +324,141 @@
   background: #1f7ac0;
 }
 
+.reports-groups-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.report-group-card {
+  background: #f9fbfd;
+  border: 1px solid #e3ebf3;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.report-group-header h4 {
+  margin: 0;
+  font-size: 17px;
+  color: #1f2d3d;
+}
+
+.report-group-header p {
+  margin: 8px 0 14px;
+  color: #607081;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.report-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.report-item {
+  background: #fff;
+  border: 1px solid #e9eff5;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.report-item-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.report-item h5 {
+  margin: 0;
+  font-size: 15px;
+  color: #2c3e50;
+}
+
+.report-item p {
+  margin: 0;
+  color: #6a7a89;
+  font-size: 13px;
+}
+
+.report-status-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.report-status-ready {
+  background: #e7f8ef;
+  color: #1f8f54;
+  border: 1px solid #bde8cf;
+}
+
+.report-status-coming_soon {
+  background: #fff4e9;
+  color: #b45d00;
+  border: 1px solid #ffd8b1;
+}
+
+.report-viewer-note {
+  color: #506070;
+  margin: 8px 0;
+}
+
+.report-viewer-error {
+  color: #c0392b;
+  margin: 8px 0;
+}
+
+.balance-sheet-wrap {
+  margin-top: 8px;
+}
+
+.balance-sheet-meta {
+  color: #5f6f80;
+  margin-bottom: 12px;
+}
+
+.balance-sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.balance-sheet-grid h4 {
+  margin: 0 0 8px;
+  color: #2c3e50;
+}
+
+.balance-sheet-status {
+  margin-top: 12px;
+  font-weight: 600;
+}
+
+.balance-sheet-status.ok {
+  color: #1f8f54;
+}
+
+.balance-sheet-status.warn {
+  color: #c0392b;
+}
+
 @media (max-width: 1024px) {
   .common-ad-slot,
   .fallback-ad-carousel {
     width: 260px;
+  }
+
+  .reports-groups-grid {
+    grid-template-columns: 1fr;
   }
 }
