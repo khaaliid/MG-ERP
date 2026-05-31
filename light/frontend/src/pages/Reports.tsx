@@ -61,70 +61,70 @@ type CashierClosureSummaryReport = {
 
 const REPORT_GROUPS: ReportGroup[] = [
   {
-    title: 'Core Financial Statements (Legal Requirement)',
-    subtitle: 'Essential statutory reports for compliance and formal financial review.',
+    title: 'reports_section_core_financial_title',
+    subtitle: 'reports_section_core_financial_subtitle',
     icon: '📘',
     reports: [
       {
         key: 'balance_sheet',
-        name: 'Balance Sheet',
-        description: 'Assets, liabilities, and equity snapshot for the selected period.',
+        name: 'reports_item_balance_sheet_name',
+        description: 'reports_item_balance_sheet_desc',
         status: 'ready',
       },
       {
         key: 'income_statement',
-        name: 'Income Statement',
-        description: 'Revenue, expenses, and net income performance summary.',
+        name: 'reports_item_income_statement_name',
+        description: 'reports_item_income_statement_desc',
         status: 'coming_soon',
       },
       {
         key: 'cash_flow_statement',
-        name: 'Cash Flow Statement',
-        description: 'Operating, investing, and financing cash movement analysis.',
+        name: 'reports_item_cash_flow_statement_name',
+        description: 'reports_item_cash_flow_statement_desc',
         status: 'coming_soon',
       },
     ],
   },
   {
-    title: 'Audit Reports',
-    subtitle: 'Operational control and reconciliation reports for audit teams.',
+    title: 'reports_section_audit_title',
+    subtitle: 'reports_section_audit_subtitle',
     icon: '🧾',
     reports: [
       {
         key: 'trial_balance',
-        name: 'Trial Balance',
-        description: 'Consolidated debit and credit balances across ledger accounts.',
+        name: 'reports_item_trial_balance_name',
+        description: 'reports_item_trial_balance_desc',
         status: 'coming_soon',
       },
       {
         key: 'cashier_closure_summary',
-        name: 'Cashier Closure Summary',
-        description: 'Cashier session closure totals, variances, and reconciliation status.',
+        name: 'reports_item_cashier_closure_summary_name',
+        description: 'reports_item_cashier_closure_summary_desc',
         status: 'ready',
       },
     ],
   },
   {
-    title: 'Tax Summary',
-    subtitle: 'Tax and settlement visibility for payable and receivable positions.',
+    title: 'reports_section_tax_title',
+    subtitle: 'reports_section_tax_subtitle',
     icon: '💼',
     reports: [
       {
         key: 'tax_summary',
-        name: 'Tax Summary',
-        description: 'Collected tax, payable tax, and net tax obligation overview.',
+        name: 'reports_item_tax_summary_name',
+        description: 'reports_item_tax_summary_desc',
         status: 'coming_soon',
       },
       {
         key: 'accounts_receivable',
-        name: 'Accounts Receivable',
-        description: 'Outstanding customer balances and aging distribution.',
+        name: 'reports_item_accounts_receivable_name',
+        description: 'reports_item_accounts_receivable_desc',
         status: 'coming_soon',
       },
       {
         key: 'accounts_payable',
-        name: 'Accounts Payable',
-        description: 'Outstanding supplier balances and due-date obligations.',
+        name: 'reports_item_accounts_payable_name',
+        description: 'reports_item_accounts_payable_desc',
         status: 'coming_soon',
       },
     ],
@@ -143,7 +143,7 @@ function Reports() {
   const [activeReportKey, setActiveReportKey] = useState<string | null>(null);
   const [balanceSheetReport, setBalanceSheetReport] = useState<BalanceSheetReport | null>(null);
   const [cashierClosureReport, setCashierClosureReport] = useState<CashierClosureSummaryReport | null>(null);
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   console.log("Current detected language:", i18n.language);
 
   useEffect(() => {
@@ -240,7 +240,7 @@ function Reports() {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
-          <p className="mt-4 text-lg text-gray-600">Loading reports...</p>
+          <p className="mt-4 text-lg text-gray-600">{t('reports_loading')}</p>
         </div>
       </div>
     );
@@ -253,7 +253,7 @@ function Reports() {
           <div className="flex items-center gap-3">
             <span className="text-2xl">⚠️</span>
             <div>
-              <p className="font-semibold">Error Loading Reports</p>
+              <p className="font-semibold">{t('reports_error_title')}</p>
               <p>{error}</p>
             </div>
           </div>
@@ -265,23 +265,23 @@ function Reports() {
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="page-header">
-        <h1>📊 Business Reports & Analytics</h1>
-        <p>Comprehensive overview of sales, inventory, and financial performance</p>
+        <h1>{t('reports_page_title')}</h1>
+        <p>{t('reports_page_subtitle')}</p>
       </div>
 
       <div className="mb-6" style={{ marginTop: 12 }}>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ minWidth: 220 }}>
-            <label style={{ display: 'block', marginBottom: 6 }}>📅 Report Period</label>
+            <label style={{ display: 'block', marginBottom: 6 }}>{t('reports_date_range')}</label>
             <select
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg"
             >
-              <option value="7">Last 7 Days</option>
-              <option value="30">Last 30 Days</option>
-              <option value="90">Last 90 Days</option>
-              <option value="365">Last Year</option>
+              <option value="7">{t('reports_date_range_7days')}</option>
+              <option value="30">{t('reports_date_range_30days')}</option>
+              <option value="90">{t('reports_date_range_90days')}</option>
+              <option value="365">{t('reports_date_range_1year')}</option>
             </select>
           </div>
         </div>
@@ -289,46 +289,46 @@ function Reports() {
 
       <div className="stats-grid">
         <div className="stat-card">
-          <h3>Total Sales</h3>
+          <h3>{t('reports_stat_total_sales')}</h3>
           <div className="value">${salesReport?.total_sales.toFixed(2)}</div>
-          <p style={{ color: '#7f8c8d', marginTop: 10 }}>{salesReport?.total_transactions} transactions</p>
+          <p style={{ color: '#7f8c8d', marginTop: 10 }}>{salesReport?.total_transactions} {t('reports_stat_transactions')}</p>
         </div>
 
         <div className="stat-card">
-          <h3>Current Balance</h3>
+          <h3>{t('reports_stat_current_balance')}</h3>
           <div className="value">${ledgerReport?.current_balance.toFixed(2)}</div>
-          <p style={{ color: '#27ae60', marginTop: 10 }}>Income: ${ledgerReport?.total_income.toFixed(2)}</p>
+          <p style={{ color: '#27ae60', marginTop: 10 }}>{t('reports_stat_income')} ${ledgerReport?.total_income.toFixed(2)}</p>
         </div>
 
         <div className="stat-card">
-          <h3>Inventory Value</h3>
+          <h3>{t('reports_stat_inventory_value')}</h3>
           <div className="value">${inventoryReport?.total_value.toFixed(2)}</div>
-          <p style={{ color: '#7f8c8d', marginTop: 10 }}>{inventoryReport?.total_items} items</p>
+          <p style={{ color: '#7f8c8d', marginTop: 10 }}>{inventoryReport?.total_items} {t('reports_stat_items')}</p>
         </div>
 
         <div className="stat-card">
-          <h3>Low Stock Items</h3>
+          <h3>{t('reports_stat_low_stock')}</h3>
           <div className="value" style={{ color: inventoryReport?.low_stock_items > 0 ? '#e74c3c' : '#27ae60' }}>{inventoryReport?.low_stock_items}</div>
-          <p style={{ color: '#7f8c8d', marginTop: 10 }}>Out of stock: {inventoryReport?.out_of_stock_items}</p>
+          <p style={{ color: '#7f8c8d', marginTop: 10 }}>{t('reports_stat_out_of_stock')} {inventoryReport?.out_of_stock_items}</p>
         </div>
 
         <div className="stat-card">
-          <h3>Net Profit</h3>
+          <h3>{t('reports_stat_net_profit')}</h3>
           <div className="value" style={{ color: (ledgerReport?.total_income - ledgerReport?.total_expenses) >= 0 ? '#1abc9c' : '#e74c3c' }}>${((ledgerReport?.total_income || 0) - (ledgerReport?.total_expenses || 0)).toFixed(2)}</div>
-          <p style={{ color: '#7f8c8d', marginTop: 10 }}>Income − Expenses</p>
+          <p style={{ color: '#7f8c8d', marginTop: 10 }}>{t('reports_stat_income_expenses')}</p>
         </div>
 
         <div className="stat-card">
-          <h3>Total Transactions</h3>
+          <h3>{t('reports_stat_total_transactions')}</h3>
           <div className="value">{ledgerReport?.transaction_count}</div>
-          <p style={{ color: '#7f8c8d', marginTop: 10 }}>All ledgers</p>
+          <p style={{ color: '#7f8c8d', marginTop: 10 }}>{t('reports_stat_all_ledgers')}</p>
         </div>
       </div>
 
       <div className="card" style={{ marginTop: 10 }}>
-        <h3>📚 Report Catalog</h3>
+        <h3>{t('reports_catalog_title')}</h3>
         <p style={{ color: '#7f8c8d', marginTop: 0, marginBottom: 16 }}>
-          Access legal financial statements, audit reports, and tax summaries from one place.
+          {t('reports_catalog_subtitle')}
         </p>
 
         <div className="reports-groups-grid">
@@ -338,9 +338,9 @@ function Reports() {
                 <div>
                   <h4>
                     <span style={{ marginRight: 8 }}>{group.icon}</span>
-                    {group.title}
+                    {t(group.title)}
                   </h4>
-                  <p>{group.subtitle}</p>
+                  <p>{t(group.subtitle)}</p>
                 </div>
               </div>
 
@@ -349,12 +349,12 @@ function Reports() {
                   <article className="report-item" key={report.key}>
                     <div>
                       <div className="report-item-title-row">
-                        <h5>{report.name}</h5>
+                        <h5>{t(report.name)}</h5>
                         <span className={`report-status-pill report-status-${report.status}`}>
-                          {report.status === 'ready' ? 'Available' : 'Coming Soon'}
+                          {report.status === 'ready' ? t('reports_item_status_available') : t('reports_item_status_coming_soon')}
                         </span>
                       </div>
-                      <p>{report.description}</p>
+                      <p>{t(report.description)}</p>
                     </div>
                     <button
                       type="button"
@@ -363,7 +363,7 @@ function Reports() {
                       disabled={report.status !== 'ready'}
                       style={{ opacity: report.status === 'ready' ? 1 : 0.55 }}
                     >
-                      {report.status === 'ready' ? 'Open Report' : 'Planned'}
+                      {report.status === 'ready' ? t('reports_button_open') : t('reports_button_planned')}
                     </button>
                   </article>
                 ))}
@@ -375,8 +375,8 @@ function Reports() {
 
       {(reportActionLoading || reportActionError || balanceSheetReport || cashierClosureReport) && (
         <div className="card" style={{ marginTop: 18 }}>
-          <h3>🧮 Report Viewer</h3>
-          {reportActionLoading && <p className="report-viewer-note">Loading selected report...</p>}
+          <h3>{t('reports_viewer_title')}</h3>
+          {reportActionLoading && <p className="report-viewer-note">{t('reports_viewer_loading')}</p>}
           {!reportActionLoading && reportActionError && (
             <p className="report-viewer-error">{reportActionError}</p>
           )}
@@ -384,12 +384,12 @@ function Reports() {
           {!reportActionLoading && !reportActionError && activeReportKey === 'balance_sheet' && balanceSheetReport && (
             <div className="balance-sheet-wrap">
               <div className="balance-sheet-meta">
-                <strong>As Of:</strong> {new Date(balanceSheetReport.as_of_date).toLocaleString()}
+                <strong>{t('reports_balance_sheet_as_of')}</strong> {new Date(balanceSheetReport.as_of_date).toLocaleString()}
               </div>
 
               <div className="balance-sheet-grid">
                 <section>
-                  <h4>Assets</h4>
+                  <h4>{t('reports_balance_sheet_assets')}</h4>
                   <table className="table">
                     <tbody>
                       {balanceSheetReport.assets.map((line) => (
@@ -399,7 +399,7 @@ function Reports() {
                         </tr>
                       ))}
                       <tr>
-                        <td><strong>Total Assets</strong></td>
+                        <td><strong>{t('reports_balance_sheet_total_assets')}</strong></td>
                         <td><strong>{formatCurrency(balanceSheetReport.total_assets)}</strong></td>
                       </tr>
                     </tbody>
@@ -407,7 +407,7 @@ function Reports() {
                 </section>
 
                 <section>
-                  <h4>Liabilities</h4>
+                  <h4>{t('reports_balance_sheet_liabilities')}</h4>
                   <table className="table">
                     <tbody>
                       {balanceSheetReport.liabilities.map((line) => (
@@ -417,13 +417,13 @@ function Reports() {
                         </tr>
                       ))}
                       <tr>
-                        <td><strong>Total Liabilities</strong></td>
+                        <td><strong>{t('reports_balance_sheet_total_liabilities')}</strong></td>
                         <td><strong>{formatCurrency(balanceSheetReport.total_liabilities)}</strong></td>
                       </tr>
                     </tbody>
                   </table>
 
-                  <h4 style={{ marginTop: 14 }}>Equity</h4>
+                  <h4 style={{ marginTop: 14 }}>{t('reports_balance_sheet_equity')}</h4>
                   <table className="table">
                     <tbody>
                       {balanceSheetReport.equity.map((line) => (
@@ -433,11 +433,11 @@ function Reports() {
                         </tr>
                       ))}
                       <tr>
-                        <td><strong>Total Equity</strong></td>
+                        <td><strong>{t('reports_balance_sheet_total_equity')}</strong></td>
                         <td><strong>{formatCurrency(balanceSheetReport.total_equity)}</strong></td>
                       </tr>
                       <tr>
-                        <td><strong>Total Liabilities + Equity</strong></td>
+                        <td><strong>{t('reports_balance_sheet_total_liab_equity')}</strong></td>
                         <td><strong>{formatCurrency(balanceSheetReport.total_liabilities + balanceSheetReport.total_equity)}</strong></td>
                       </tr>
                     </tbody>
@@ -447,8 +447,8 @@ function Reports() {
 
               <p className={`balance-sheet-status ${balanceSheetReport.is_balanced ? 'ok' : 'warn'}`}>
                 {balanceSheetReport.is_balanced
-                  ? 'Balance sheet is balanced.'
-                  : 'Balance sheet is not balanced. Review source transactions and mappings.'}
+                  ? t('reports_balance_sheet_balanced')
+                  : t('reports_balance_sheet_not_balanced')}
               </p>
             </div>
           )}
@@ -456,27 +456,27 @@ function Reports() {
           {!reportActionLoading && !reportActionError && activeReportKey === 'cashier_closure_summary' && cashierClosureReport && (
             <div className="cashier-closure-wrap">
               <div className="cashier-closure-meta">
-                <strong>Report Date:</strong> {new Date(cashierClosureReport.report_date).toLocaleString()} | 
-                <strong style={{ marginLeft: 16 }}>Period:</strong> {new Date(cashierClosureReport.period_start).toLocaleDateString()} to {new Date(cashierClosureReport.period_end).toLocaleDateString()}
+                <strong>{t('report_cashier_closure_report_date')}:</strong> {new Date(cashierClosureReport.report_date).toLocaleString()} | 
+                <strong style={{ marginLeft: 16 }}>{t('report_cashier_closure_period')}:</strong> {new Date(cashierClosureReport.period_start).toLocaleDateString()} to {new Date(cashierClosureReport.period_end).toLocaleDateString()}
               </div>
 
               <div className="cashier-closure-summary" style={{ marginBottom: 20, padding: 12, backgroundColor: '#f5f5f5', borderRadius: 6 }}>
-                <h4 style={{ marginTop: 0 }}>Summary</h4>
+                <h4 style={{ marginTop: 0 }}>{t('report_cashier_closure_summary')}</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                   <div>
-                    <strong>Total Closures:</strong>
+                    <strong>{t('report_cashier_closure_total_closures')}:</strong>
                     <div style={{ fontSize: '1.5em', color: '#2c3e50', marginTop: 4 }}>{cashierClosureReport.total_closures}</div>
                   </div>
                   <div>
-                    <strong>Total Revenue:</strong>
+                    <strong>{t('report_cashier_closure_total_revenue')}:</strong>
                     <div style={{ fontSize: '1.5em', color: '#27ae60', marginTop: 4 }}>{formatCurrency(cashierClosureReport.total_revenue)}</div>
                   </div>
                   <div>
-                    <strong>Total Transactions:</strong>
+                    <strong>{t('report_cashier_closure_total_transactions')}:</strong>
                     <div style={{ fontSize: '1.5em', color: '#2c3e50', marginTop: 4 }}>{cashierClosureReport.total_transactions}</div>
                   </div>
                   <div>
-                    <strong>Total Variance:</strong>
+                    <strong>{t('report_cashier_closure_total_variance')}:</strong>
                     <div style={{ fontSize: '1.5em', color: cashierClosureReport.total_variance > 0 ? '#e74c3c' : '#27ae60', marginTop: 4 }}>{formatCurrency(cashierClosureReport.total_variance)}</div>
                   </div>
                 </div>
@@ -484,7 +484,7 @@ function Reports() {
 
               <div className="cashier-closure-status" style={{ marginBottom: 20 }}>
                 <p className={`report-status-label`}>
-                  <strong>Reconciliation Status:</strong> <span style={{
+                  <strong>{t('report_cashier_closure_reconciliation_status')}:</strong> <span style={{
                     padding: '4px 8px',
                     borderRadius: 4,
                     backgroundColor: cashierClosureReport.reconciliation_status === 'all_reconciled' ? '#d4edda' : 
@@ -492,26 +492,26 @@ function Reports() {
                     color: cashierClosureReport.reconciliation_status === 'all_reconciled' ? '#155724' : 
                            cashierClosureReport.reconciliation_status === 'partial_variance' ? '#856404' : '#721c24'
                   }}>
-                    {cashierClosureReport.reconciliation_status === 'all_reconciled' ? 'All Reconciled ✓' : 
-                     cashierClosureReport.reconciliation_status === 'partial_variance' ? 'Partial Variance ⚠' : 
-                     'Unreconciled ✗'}
+                    {cashierClosureReport.reconciliation_status === 'all_reconciled' ? t('report_cashier_closure_all_reconciled') : 
+                     cashierClosureReport.reconciliation_status === 'partial_variance' ? t('report_cashier_closure_partial_variance') : 
+                     t('report_cashier_closure_unreconciled')}
                   </span>
                 </p>
               </div>
 
-              <h4>Cashier Closures</h4>
+              <h4>{t('report_cashier_closure_closures')}</h4>
               <div style={{ overflowX: 'auto' }}>
                 <table className="table" style={{ width: '100%' }}>
                   <thead>
                     <tr>
-                      <th>Cashier Name</th>
-                      <th>Period</th>
-                      <th>Transactions</th>
-                      <th>Total Sales</th>
-                      <th>Expected</th>
-                      <th>Actual</th>
-                      <th>Variance</th>
-                      <th>Status</th>
+                      <th>{t('report_cashier_closure_cashier_name')}</th>
+                      <th>{t('report_cashier_closure_col_period')}</th>
+                      <th>{t('report_cashier_closure_col_transactions')}</th>
+                      <th>{t('report_cashier_closure_col_total_sales')}</th>
+                      <th>{t('report_cashier_closure_col_expected')}</th>
+                      <th>{t('report_cashier_closure_col_actual')}</th>
+                      <th>{t('report_cashier_closure_col_variance')}</th>
+                      <th>{t('report_cashier_closure_col_status')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -534,9 +534,9 @@ function Reports() {
                             color: closure.reconciliation_status === 'reconciled' ? '#155724' : 
                                  closure.reconciliation_status === 'variance' ? '#856404' : '#721c24'
                           }}>
-                            {closure.reconciliation_status === 'reconciled' ? 'Reconciled' : 
-                             closure.reconciliation_status === 'variance' ? 'Variance' : 
-                             'Unreconciled'}
+                            {closure.reconciliation_status === 'reconciled' ? t('report_cashier_closure_reconciled') : 
+                             closure.reconciliation_status === 'variance' ? t('report_cashier_closure_variance') : 
+                             t('report_cashier_closure_unreconciled')}
                           </span>
                         </td>
                       </tr>
@@ -546,7 +546,7 @@ function Reports() {
               </div>
 
               <div style={{ marginTop: 16 }}>
-                <h4>Payment Methods Breakdown</h4>
+                <h4>{t('report_cashier_closure_payment_breakdown')}</h4>
                 {cashierClosureReport.closures.map((closure) => (
                   closure.by_payment_method && Object.keys(closure.by_payment_method).length > 0 && (
                     <div key={`breakdown-${closure.sales_user_id}`} style={{ marginBottom: 12, padding: 10, backgroundColor: '#fafafa', borderRadius: 4 }}>
@@ -569,23 +569,23 @@ function Reports() {
       )}
 
       <div className="card" style={{ marginTop: 18 }}>
-        <h3>Quick Stats</h3>
+        <h3>{t('reports_quick_stats')}</h3>
         <table className="table">
           <tbody>
             <tr>
-              <td><strong>Average Transaction</strong></td>
+              <td><strong>{t('reports_quick_stats_avg_transaction')}</strong></td>
               <td>${salesReport?.average_transaction.toFixed(2)}</td>
             </tr>
             <tr>
-              <td><strong>Total Tax Collected</strong></td>
+              <td><strong>{t('reports_quick_stats_tax_collected')}</strong></td>
               <td>${salesReport?.total_tax.toFixed(2)}</td>
             </tr>
             <tr>
-              <td><strong>Total Discounts</strong></td>
+              <td><strong>{t('reports_quick_stats_discounts')}</strong></td>
               <td>${salesReport?.total_discount.toFixed(2)}</td>
             </tr>
             <tr>
-              <td><strong>Total Expenses</strong></td>
+              <td><strong>{t('reports_quick_stats_expenses')}</strong></td>
               <td>${ledgerReport?.total_expenses.toFixed(2)}</td>
             </tr>
           </tbody>
