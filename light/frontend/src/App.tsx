@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -39,10 +39,65 @@ const normalizeAdResponse = (payload: any): RemoteAd => {
   };
 };
 
+const FALLBACK_SLIDES = [
+  {
+    title: 'Place your ad here',
+    description: 'This space is available for sponsored campaigns and product promotions.'
+  },
+  {
+    title: 'Place your ad here',
+    description: 'Reach operators and managers directly inside their daily ERP workflow.'
+  },
+  {
+    title: 'Place your ad here',
+    description: 'Display your brand message with a clean, high-visibility placement.'
+  }
+];
+
+const FallbackAdCarousel = () => {
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % FALLBACK_SLIDES.length);
+    }, 3500);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  return (
+    <div className="fallback-ad-carousel" aria-label="Fallback ad carousel">
+      <div className="fallback-ad-track" style={{ transform: `translateX(-${activeSlide * 100}%)` }}>
+        {FALLBACK_SLIDES.map((slide, index) => (
+          <div className="fallback-ad-slide" key={`${slide.title}-${index}`}>
+            <div className="fallback-ad-badge">Ad Placeholder</div>
+            <h4>{slide.title}</h4>
+            <p>{slide.description}</p>
+          </div>
+        ))}
+      </div>
+      <div className="fallback-ad-dots" aria-hidden="true">
+        {FALLBACK_SLIDES.map((_, index) => (
+          <button
+            key={index}
+            type="button"
+            className={`fallback-ad-dot${index === activeSlide ? ' active' : ''}`}
+            onClick={() => setActiveSlide(index)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const AdSlot = () => {
   const [remoteAd, setRemoteAd] = useState<RemoteAd | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [isAdsApiFailed, setIsAdsApiFailed] = useState(false);
+  const [isAdsenseFailed, setIsAdsenseFailed] = useState(false);
+  const adsenseSlotRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -51,7 +106,7 @@ const AdSlot = () => {
     const loadAd = async () => {
       try {
         setIsLoading(true);
-        setError(null);
+        setIsAdsApiFailed(false);
 
         const response = await fetch(adsApiUrl, {
           method: 'GET',
@@ -66,7 +121,7 @@ const AdSlot = () => {
         setRemoteAd(normalizeAdResponse(payload));
       } catch (fetchError: any) {
         if (fetchError?.name !== 'AbortError') {
-          setError('Unable to load external ad right now.');
+          setIsAdsApiFailed(true);
         }
       } finally {
         setIsLoading(false);
@@ -80,13 +135,40 @@ const AdSlot = () => {
     };
   }, []);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const slotNode = adsenseSlotRef.current;
+      if (!slotNode) {
+        setIsAdsenseFailed(true);
+        return;
+      }
+
+      const hasAdsenseScript = !!document.querySelector('script[src*="adsbygoogle"]');
+      const hasAdsenseRuntime = typeof (window as any).adsbygoogle !== 'undefined';
+      const hasRenderedAd = !!slotNode.querySelector('iframe, ins, img, object, embed');
+
+      if ((!hasAdsenseScript && !hasAdsenseRuntime) || !hasRenderedAd) {
+        setIsAdsenseFailed(true);
+      }
+    }, 4000);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, []);
+
+  if (isAdsApiFailed || isAdsenseFailed) {
+    return <FallbackAdCarousel />;
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0', alignSelf: 'stretch' }}>
+    <div className="common-ad-column">
       <div
         id="light-adsense-ad-slot"
         className="common-ad-slot common-ad-slot-adsense"
         data-ad-slot="light-global-adsense"
         data-ad-provider="adsense"
+        ref={adsenseSlotRef}
         style={{ flex: 1, overflow: 'hidden' }}
       />
       <div
@@ -97,8 +179,7 @@ const AdSlot = () => {
         style={{ flex: 1, overflow: 'hidden' }}
       >
         {isLoading && <p>Loading ad...</p>}
-        {!isLoading && error && <p>{error}</p>}
-        {!isLoading && !error && remoteAd && (
+        {!isLoading && remoteAd && (
           <>
             <h4 style={{ marginTop: 0 }}>{remoteAd.title}</h4>
             <p>{remoteAd.description}</p>
