@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { reportsAPI } from '../api';
+import { reportsAPI, salesUserAPI } from '../api';
 import { useTranslation } from 'react-i18next';
 import '../i18n';
 
@@ -59,6 +59,11 @@ type CashierClosureSummaryReport = {
   reconciliation_status: 'all_reconciled' | 'partial_variance' | 'unreconciled';
 };
 
+type SalesUser = {
+  id: number;
+  name: string;
+};
+
 const REPORT_GROUPS: ReportGroup[] = [
   {
     title: 'reports_section_core_financial_title',
@@ -102,6 +107,12 @@ const REPORT_GROUPS: ReportGroup[] = [
         description: 'reports_item_cashier_closure_summary_desc',
         status: 'ready',
       },
+      {
+        key: 'cashier_closure_daily',
+        name: 'reports_item_cashier_closure_daily_name',
+        description: 'reports_item_cashier_closure_daily_desc',
+        status: 'ready',
+      },
     ],
   },
   {
@@ -143,12 +154,19 @@ function Reports() {
   const [activeReportKey, setActiveReportKey] = useState<string | null>(null);
   const [balanceSheetReport, setBalanceSheetReport] = useState<BalanceSheetReport | null>(null);
   const [cashierClosureReport, setCashierClosureReport] = useState<CashierClosureSummaryReport | null>(null);
+  const [salesUsers, setSalesUsers] = useState<SalesUser[]>([]);
+  const [closureFilterDate, setClosureFilterDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [closureFilterSalesUserId, setClosureFilterSalesUserId] = useState<string>('');
   const { i18n, t } = useTranslation();
   console.log("Current detected language:", i18n.language);
 
   useEffect(() => {
     loadReports();
   }, [dateRange]);
+
+  useEffect(() => {
+    loadSalesUsers();
+  }, []);
 
   const loadReports = async () => {
     try {
@@ -182,6 +200,40 @@ function Reports() {
   };
 
   const formatCurrency = (value: number) => `$${(value || 0).toFixed(2)}`;
+
+  const loadSalesUsers = async () => {
+    try {
+      const response = await salesUserAPI.getAll({ active_only: true });
+      setSalesUsers(response.data || []);
+    } catch (err) {
+      console.error('Failed to load sales users for report filters:', err);
+      setSalesUsers([]);
+    }
+  };
+
+  const openCashierClosureDailyReport = async () => {
+    try {
+      setReportActionLoading(true);
+      setReportActionError('');
+      setActiveReportKey('cashier_closure_daily');
+
+      const dayStart = new Date(`${closureFilterDate}T00:00:00`);
+      const dayEnd = new Date(`${closureFilterDate}T23:59:59.999`);
+
+      const response = await reportsAPI.getCashierClosureSummaryReport({
+        start_date: dayStart.toISOString(),
+        end_date: dayEnd.toISOString(),
+        sales_user_id: closureFilterSalesUserId ? Number(closureFilterSalesUserId) : undefined,
+      });
+
+      setCashierClosureReport(response.data);
+    } catch (err: any) {
+      setCashierClosureReport(null);
+      setReportActionError(err.response?.data?.detail || t('report_cashier_closure_daily_load_failed'));
+    } finally {
+      setReportActionLoading(false);
+    }
+  };
 
   const handleOpenReport = async (report: ReportItem) => {
     if (report.status !== 'ready') {
@@ -226,6 +278,11 @@ function Reports() {
       } finally {
         setReportActionLoading(false);
       }
+      return;
+    }
+
+    if (report.key === 'cashier_closure_daily') {
+      await openCashierClosureDailyReport();
       return;
     }
 
@@ -376,6 +433,43 @@ function Reports() {
       {(reportActionLoading || reportActionError || balanceSheetReport || cashierClosureReport) && (
         <div className="card" style={{ marginTop: 18 }}>
           <h3>{t('reports_viewer_title')}</h3>
+
+          {activeReportKey === 'cashier_closure_daily' && (
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 14, alignItems: 'end' }}>
+              <div style={{ minWidth: 180 }}>
+                <label style={{ display: 'block', marginBottom: 6 }}>{t('report_cashier_closure_filter_day')}</label>
+                <input
+                  type="date"
+                  value={closureFilterDate}
+                  onChange={(e) => setClosureFilterDate(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              <div style={{ minWidth: 220 }}>
+                <label style={{ display: 'block', marginBottom: 6 }}>{t('report_cashier_closure_filter_cashier')}</label>
+                <select
+                  value={closureFilterSalesUserId}
+                  onChange={(e) => setClosureFilterSalesUserId(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg"
+                >
+                  <option value="">{t('report_cashier_closure_filter_all_cashiers')}</option>
+                  {salesUsers.map((user) => (
+                    <option key={user.id} value={user.id}>{user.name}</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="button"
+                className="button button-primary"
+                onClick={openCashierClosureDailyReport}
+                disabled={reportActionLoading}
+                style={{ height: 40 }}
+              >
+                {t('report_cashier_closure_filter_run')}
+              </button>
+            </div>
+          )}
+
           {reportActionLoading && <p className="report-viewer-note">{t('reports_viewer_loading')}</p>}
           {!reportActionLoading && reportActionError && (
             <p className="report-viewer-error">{reportActionError}</p>
@@ -453,7 +547,7 @@ function Reports() {
             </div>
           )}
 
-          {!reportActionLoading && !reportActionError && activeReportKey === 'cashier_closure_summary' && cashierClosureReport && (
+          {!reportActionLoading && !reportActionError && (activeReportKey === 'cashier_closure_summary' || activeReportKey === 'cashier_closure_daily') && cashierClosureReport && (
             <div className="cashier-closure-wrap">
               <div className="cashier-closure-meta">
                 <strong>{t('report_cashier_closure_report_date')}:</strong> {new Date(cashierClosureReport.report_date).toLocaleString()} | 

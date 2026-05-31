@@ -446,6 +446,11 @@ const resources = {
         "report_cashier_closure_reconciled": "Reconciled",
         "report_cashier_closure_variance": "Variance",
         "report_cashier_closure_payment_breakdown": "Payment Methods Breakdown",
+        "report_cashier_closure_filter_day": "Day",
+        "report_cashier_closure_filter_cashier": "Cashier",
+        "report_cashier_closure_filter_all_cashiers": "All Cashiers",
+        "report_cashier_closure_filter_run": "Run Daily Report",
+        "report_cashier_closure_daily_load_failed": "Failed to load daily cashier closure report",
 
         // Report Sections
         "reports_section_core_financial_title": "Core Financial Statements (Legal Requirement)",
@@ -468,6 +473,8 @@ const resources = {
         "reports_item_trial_balance_desc": "Consolidated debit and credit balances across ledger accounts.",
         "reports_item_cashier_closure_summary_name": "Cashier Closure Summary",
         "reports_item_cashier_closure_summary_desc": "Cashier session closure totals, variances, and reconciliation status.",
+        "reports_item_cashier_closure_daily_name": "Cashier Closure by Day",
+        "reports_item_cashier_closure_daily_desc": "Review cashier closure data for a specific day and optional cashier.",
 
         // Report Items - Tax Summary
         "reports_item_tax_summary_name": "Tax Summary",
@@ -926,6 +933,11 @@ const resources = {
     "report_cashier_closure_reconciled": "Abgestimmt",
     "report_cashier_closure_variance": "Abweichung",
     "report_cashier_closure_payment_breakdown": "Aufschlüsselung der Zahlungsmethoden",
+    "report_cashier_closure_filter_day": "Tag",
+    "report_cashier_closure_filter_cashier": "Kassierer",
+    "report_cashier_closure_filter_all_cashiers": "Alle Kassierer",
+    "report_cashier_closure_filter_run": "Tagesbericht ausführen",
+    "report_cashier_closure_daily_load_failed": "Täglicher Kassenschlussbericht konnte nicht geladen werden",
 
     // Report Sections
     "reports_section_core_financial_title": "Wichtigste Finanzabrechnungen (gesetzliche Voraussetzung)",
@@ -948,6 +960,8 @@ const resources = {
     "reports_item_trial_balance_desc": "Konsolidierte Debit- und Kreditguthaben über Hauptbuchkonten.",
     "reports_item_cashier_closure_summary_name": "Kassenschlussbericht",
     "reports_item_cashier_closure_summary_desc": "Kassierer-Session-Abschlussgesamtbeträge, Abweichungen und Abstimmungsstatus.",
+    "reports_item_cashier_closure_daily_name": "Kassenschluss nach Tag",
+    "reports_item_cashier_closure_daily_desc": "Prüfen Sie Kassenschlussdaten für einen bestimmten Tag und optionalen Kassierer.",
 
     // Report Items - Tax Summary
     "reports_item_tax_summary_name": "Steuerzusammenfassung",
@@ -1406,6 +1420,11 @@ const resources = {
     "report_cashier_closure_reconciled": "مطابق",
     "report_cashier_closure_variance": "فارق",
     "report_cashier_closure_payment_breakdown": "تفصيل طرق الدفع",
+    "report_cashier_closure_filter_day": "اليوم",
+    "report_cashier_closure_filter_cashier": "الكاشير",
+    "report_cashier_closure_filter_all_cashiers": "كل الكاشير",
+    "report_cashier_closure_filter_run": "تشغيل تقرير اليوم",
+    "report_cashier_closure_daily_load_failed": "فشل تحميل تقرير إغلاق الكاشير اليومي",
 
     // Report Sections
     "reports_section_core_financial_title": "أساسيات البيانات المالية (المتطلب القانوني)",
@@ -1428,6 +1447,8 @@ const resources = {
     "reports_item_trial_balance_desc": "الأرصدة المدينة والدائنة المدمجة عبر حسابات دفتر الأستاذ.",
     "reports_item_cashier_closure_summary_name": "ملخص إغلاق الصندوق",
     "reports_item_cashier_closure_summary_desc": "إجمالي إغلاق جلسة الصندوق والفوارق وحالة المطابقة.",
+    "reports_item_cashier_closure_daily_name": "إغلاق الكاشير حسب اليوم",
+    "reports_item_cashier_closure_daily_desc": "راجع بيانات إغلاق الكاشير ليوم محدد ومع اختيار كاشير اختياري.",
 
     // Report Items - Tax Summary
     "reports_item_tax_summary_name": "ملخص الضرائب",
