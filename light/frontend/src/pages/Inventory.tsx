@@ -27,6 +27,7 @@ function Inventory() {
   const [barcodeImageUrl, setBarcodeImageUrl] = useState<string | null>(null);
   const [barcodeImageLoading, setBarcodeImageLoading] = useState(false);
   const [barcodeImageError, setBarcodeImageError] = useState('');
+  const [barcodePrintCount, setBarcodePrintCount] = useState(1);
   const [formData, setFormData] = useState({
     name: '',
     sku: '',
@@ -185,6 +186,7 @@ function Inventory() {
 
   const handleShowBarcode = (item: InventoryItem) => {
     setSelectedItemForBarcode(item);
+    setBarcodePrintCount(1);
     setShowBarcodeModal(true);
   };
 
@@ -215,9 +217,11 @@ function Inventory() {
         const port = await (navigator as any).serial.requestPort();
         await port.open({ baudRate: 9600 });
         
-        // Write ESC/POS data to the printer
+        // Write ESC/POS data to the printer (repeat for requested count)
         const writer = port.writable.getWriter();
-        await writer.write(data);
+        for (let i = 0; i < barcodePrintCount; i++) {
+          await writer.write(data);
+        }
         writer.releaseLock();
         
         // Close the port
@@ -259,6 +263,14 @@ function Inventory() {
 
       const printWindow = window.open('', '_blank');
       if (printWindow) {
+        const barcodeItems = Array.from({ length: barcodePrintCount }, () =>
+          `<div class="barcode-item">
+            <h2>${selectedItemForBarcode.name}</h2>
+            <div class="info">SKU: ${selectedItemForBarcode.sku}</div>
+            <div class="info">Price: $${selectedItemForBarcode.unit_price.toFixed(2)}</div>
+            <img src="${barcodeImageUrl}" alt="Barcode" />
+          </div>`
+        ).join('');
         printWindow.document.write(`
           <html>
             <head>
@@ -272,19 +284,23 @@ function Inventory() {
                   align-items: center;
                   font-family: Arial, sans-serif;
                 }
+                .barcode-item {
+                  display: flex;
+                  flex-direction: column;
+                  align-items: center;
+                  margin-bottom: 20px;
+                  page-break-inside: avoid;
+                }
                 h2 { margin: 10px 0; }
-                img { margin: 20px 0; }
-                .info { text-align: center; margin: 10px 0; }
+                img { margin: 10px 0; }
+                .info { text-align: center; margin: 4px 0; }
                 @media print {
                   button { display: none; }
                 }
               </style>
             </head>
             <body>
-              <h2>${selectedItemForBarcode.name}</h2>
-              <div class="info">SKU: ${selectedItemForBarcode.sku}</div>
-              <div class="info">Price: $${selectedItemForBarcode.unit_price.toFixed(2)}</div>
-              <img src="${barcodeImageUrl}" alt="Barcode" />
+              ${barcodeItems}
               <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">Print</button>
             </body>
           </html>
@@ -580,6 +596,40 @@ function Inventory() {
             <p style={{ color: '#7f8c8d' }}>
               SKU: {selectedItemForBarcode.sku} | Price: ${selectedItemForBarcode.unit_price.toFixed(2)}
             </p>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px',
+              margin: '12px 0',
+              padding: '12px 20px',
+              backgroundColor: '#eaf4fb',
+              border: '1px solid #aed6f1',
+              borderRadius: '8px',
+            }}>
+              <label htmlFor="barcode-print-count" style={{ fontWeight: 700, fontSize: '15px', color: '#1a5276' }}>
+                🖨️ How many to print:
+              </label>
+              <input
+                id="barcode-print-count"
+                type="number"
+                min={1}
+                max={500}
+                value={barcodePrintCount}
+                onChange={(e) => setBarcodePrintCount(Math.max(1, parseInt(e.target.value) || 1))}
+                style={{
+                  width: '75px',
+                  padding: '8px 10px',
+                  fontSize: '16px',
+                  fontWeight: 700,
+                  border: '2px solid #2980b9',
+                  borderRadius: '6px',
+                  textAlign: 'center',
+                  color: '#1a5276',
+                  backgroundColor: 'white',
+                }}
+              />
+            </div>
             <div style={{ margin: '20px 0', padding: '20px', backgroundColor: '#f8f9fa', borderRadius: '5px' }}>
               {barcodeImageLoading ? (
                 <p>{t('loading')}...</p>
